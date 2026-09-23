@@ -21,8 +21,10 @@ install.py               installs a method's bundle into a skills directory
 ## Methods
 
 | Method | What it covers |
-|---|---|
+|---|---|---|
 | [product-breakdown](methods/product-breakdown/README.md) | Systems-engineering record: a seven-layer current-state hierarchy plus one flat, dated decision stream, with generated registers |
+| [delegation-guidelines](methods/delegation-guidelines/README.md) | Behavioral guidelines — when to delegate, verify, and stop; brief composition with intent/end_state/constraints/authority; salvage-and-retry; stopping conditions; cross-run continuity |
+| [mission-command](methods/mission-command/README.md) | Why parent agents brief children with intent, end state, constraints, and freedom of action (uppdragstaktik / mission command) |
 
 ## Install
 
