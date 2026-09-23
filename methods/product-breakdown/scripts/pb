@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""pb — product-breakdown checks and register generation.
+
+Self-contained in this skill bundle; run from the bundle's base directory:
+
+    python3 scripts/pb check --strict
+    python3 scripts/pb node-size --strict
+    python3 scripts/pb registers --sync-footers
+    python3 scripts/pb doctor
+
+The breakdown root is discovered from the working directory: nearest ``pb.toml``,
+then nearest ``decisions/``, then an immediate child containing either. Pass
+``--root`` to be explicit.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from pbstd.cli import decisions_main, doctor_main, node_size_main, registers_main  # noqa: E402
+
+COMMANDS = {
+    "check": decisions_main,
+    "node-size": node_size_main,
+    "registers": registers_main,
+    "doctor": doctor_main,
+}
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] not in COMMANDS:
+        print(__doc__.strip())
+        return 2
+    return COMMANDS[argv[0]](argv=argv[1:])
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

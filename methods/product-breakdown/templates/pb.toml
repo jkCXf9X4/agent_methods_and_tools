@@ -1,0 +1,52 @@
+# pb.toml — full schema for the product-breakdown standard.
+#
+# Copy to <breakdown-root>/pb.toml and delete everything that matches the
+# default. Mirrors the built-in defaults in pbstd/config.py; that file is
+# authoritative if the two ever disagree.
+
+[layout]
+# Files treated as index nodes (target/cap in [nodes]).
+index_names = ["README.md", "WORKING-GUIDELINES.md"]
+# Subdirectory of the breakdown root holding the flat decision stream.
+decisions_dir = "decisions"
+# Files inside decisions_dir that are not records.
+record_skip = ["TEMPLATE.md", "README.md"]
+# First-line marker identifying a generated file (exempt from the node budget).
+generated_marker = "GENERATED FILE"
+# Top-level directories under the breakdown root to skip when checking nodes.
+exclude_dirs = ["tools"]
+# Where record `artifacts:` are resolved from; default is the parent of the
+# breakdown root. Set relative to the breakdown root if it differs.
+# repo_root = ".."
+
+[layers]
+# Reading order; also the allowed `layers:` values.
+order = ["intent", "product", "architecture", "implementation", "verification", "operation"]
+# ID prefix per layer (stable citation labels).
+prefixes = { intent = "ID", product = "PD", architecture = "AD", implementation = "IMD", verification = "VD", operation = "OD" }
+
+[records]
+# Required body sections, in order.
+sections = ["Context", "Decision", "Rationale", "Alternatives Considered", "Consequences", "Verification", "Review Trigger"]
+# Headings that must never appear (legacy current-state sections).
+legacy_sections = ["Current Choice", "Status", "Layer"]
+statuses = ["proposed", "accepted", "superseded", "rejected", "deprecated"]
+required_keys = ["id", "title", "date", "status", "layers", "state", "artifacts", "supersedes", "superseded_by", "related"]
+# section = [target lines, hard cap]
+budgets = { Context = [5, 8], Decision = [4, 6], Rationale = [5, 8] }
+
+[nodes]
+index_target = 40
+index_cap = 75
+leaf_target = 50
+leaf_cap = 75
+leaf_min = 10
+# Filenames always exempt from the node budget.
+exempt = ["design-choice-log.md", "traceability-map.md"]
+
+[registers]
+index = "decisions/README.md"
+log = "design-choice-log.md"
+traceability = "traceability-map.md"
+log_title = "Decision Log"
+banner = "<!-- GENERATED FILE — do not edit. Regenerate with pb-registers. -->"
