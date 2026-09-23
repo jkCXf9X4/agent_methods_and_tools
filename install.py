@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Install a method's skill bundle into an opencode skills directory.
+"""Install a method's skill bundle into a skills directory.
 
     python3 install.py --method product-breakdown
-    python3 install.py --method product-breakdown --into .opencode/skills
+    python3 install.py --method product-breakdown --into ~/.config/opencode/skills
 
-Global skills (the default) load in every repository; ``--into .opencode/skills``
-installs into the current project only.
+The default target is project-local: ``.agents/skills/<method>/`` under the
+current working directory. Pass ``--into`` to install elsewhere, for example a
+global ``~/.config/opencode/skills``.
 """
 from __future__ import annotations
 
@@ -15,14 +16,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_INTO = Path.home() / ".config" / "opencode" / "skills"
+DEFAULT_INTO = Path(".agents") / "skills"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--method", required=True, help="method name under methods/")
     parser.add_argument(
-        "--into", default=str(DEFAULT_INTO), help="skills directory to install into"
+        "--into",
+        default=str(DEFAULT_INTO),
+        help="skills directory to install into (default: ./.agents/skills)",
     )
     args = parser.parse_args()
 
@@ -31,7 +34,10 @@ def main() -> int:
         print(f"no skill bundle at {source}")
         return 1
 
-    dest = Path(args.into).expanduser().resolve() / args.method
+    into = Path(args.into).expanduser()
+    if not into.is_absolute():
+        into = Path.cwd() / into
+    dest = into.resolve() / args.method
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(source, dest)

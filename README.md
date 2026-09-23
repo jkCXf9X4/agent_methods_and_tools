@@ -10,7 +10,7 @@ Base repository: <https://github.com/jkCXf9X4/agent_methods_and_tools>.
 
 ```
 methods/<name>/          a self-contained skill bundle
-  SKILL.md               agent entrypoint (loaded by opencode)
+  SKILL.md               agent entrypoint
   guidelines/*.md        canonical operating rules
   templates/             config schema and file templates
   scripts/               the method's tools (e.g. `pb`)
@@ -26,16 +26,16 @@ install.py               installs a method's bundle into a skills directory
 
 ## Install
 
-Global (available in every repo):
+Project-local (the default), into `./.agents/skills/` of the current directory:
 
 ```bash
 python3 install.py --method product-breakdown
 ```
 
-Project-local (this repo only):
+Global (available in every repo):
 
 ```bash
-python3 install.py --method product-breakdown --into .opencode/skills
+python3 install.py --method product-breakdown --into ~/.config/opencode/skills
 ```
 
 Then the agent loads the skill on demand. The method's tool runs from the

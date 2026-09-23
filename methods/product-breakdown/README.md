@@ -17,7 +17,7 @@ drift. Full reasoning: [`guidelines/workflow-rationale.md`](guidelines/workflow-
 
 | Path | Purpose |
 |---|---|
-| [`SKILL.md`](SKILL.md) | Agent entrypoint; loaded by opencode |
+| [`SKILL.md`](SKILL.md) | Agent entrypoint |
 | [`guidelines/`](guidelines/) | Canonical rules: storage, readability, pipeline, traceability, checklist, rationale |
 | [`templates/pb.toml`](templates/pb.toml) | Config schema; only needed to override defaults |
 | [`templates/TEMPLATE.md`](templates/TEMPLATE.md) | Decision-record template |
@@ -28,8 +28,8 @@ drift. Full reasoning: [`guidelines/workflow-rationale.md`](guidelines/workflow-
 
 1. Install the skill bundle:
    ```bash
-   python3 install.py --method product-breakdown                # global
-   python3 install.py --method product-breakdown --into .opencode/skills   # project-local
+   python3 install.py --method product-breakdown                                  # -> ./.agents/skills/
+   python3 install.py --method product-breakdown --into ~/.config/opencode/skills # global
    ```
 2. Add a `pb.toml` at the breakdown root **only if** the repo differs from the
    defaults (layers, prefixes, budgets, register paths); otherwise nothing is
