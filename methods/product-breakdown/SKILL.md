@@ -29,6 +29,7 @@ All paths are relative to this skill's base directory.
 | Task | Read |
 |---|---|
 | Layer ownership / boundary rule | the breakdown's top-level `README.md` |
+| Per-layer detail and worked routing examples | `guidelines/layer-guide.md` |
 | Where a fact is stored; routing | `guidelines/storage-rules.md` |
 | Writing form | `guidelines/readability-rules.md` |
 | Idea → IMP → decision → task; gates | `guidelines/change-pipeline.md` |
@@ -47,10 +48,42 @@ remove):
 - **Not-yet-decided candidate** → file an IMP under `06-evolution/selected/`.
 - **Already decided, only doing left** → a task, not a new record.
 
-Route by concern: reason-to-exist → Intent; promised deliverable → Product;
-organizing design → Architecture; files/scripts/interfaces/configs →
-Implementation; proof/acceptance → Verification; routine build/release →
-Operation; future work/risk → Evolution.
+Route by concern; the boundary rule is the table in **The seven layers** below.
+
+## The seven layers
+
+The current state is a seven-layer hierarchy, `00-intent/` … `06-evolution/`.
+Each layer has one index (`README.md`: purpose, owns/excludes, a link table) and
+small leaves, each holding one present-tense fact. Read top-down; write by
+routing each fact to exactly one home.
+
+| Layer | Directory (record prefix) | Holds | Routing concern | Example fact |
+|---|---|---|---|---|
+| Intent | `00-intent/` (ID-) | why the product exists: scope, goals, mission, boundaries | reason-to-exist | the operator persona and in/out scope |
+| Product | `01-product/` (PD-) | the promised deliverable: capabilities and requirements others rely on | promised deliverable | an API surface contract promised to integrators |
+| Architecture | `02-architecture/` (AD-) | the organizing design: how parts fit and interact | organizing design | component decomposition and the message flow between services |
+| Implementation | `03-implementation/` (IMD-) | files, scripts, interfaces, configs | files/scripts/interfaces/configs | the CLI's config schema in `pb.toml` |
+| Verification | `04-verification/` (VD-) | proof and acceptance: how each claim is checked | proof/acceptance | the acceptance test for the checkout flow |
+| Operation | `05-operation/` (OD-) | routine build, release, and run concerns | routine build/release | the release steps and on-call runbook |
+| Evolution | `06-evolution/` (IMP-) | future work and risk: IMP candidates, never current state | future work/risk | an IMP proposing an alternative storage format |
+
+### How agents should work with them
+
+- **Read top-down, then into leaves.** Start at the breakdown's top-level
+  `README.md`, open the layer index, then the leaf that owns the concern. Indexes
+  are navigation, not content; leaves are the current-state facts.
+- **Route each fact to one home.** Use the routing concern in the table; where
+  the top-level `README.md` states the boundary rule, the `README.md` wins.
+- **Information flows downward only** (Intent → Product → Architecture →
+  Implementation → Verification → Operation). Never push design detail up a layer.
+- **Cross-layer material** keeps its canonical statement at the layer owning the
+  primary concern and defers the rest by reference; say the carve-out explicitly.
+- **Evolution holds candidates, not current state.** IMPs live there until their
+  resulting state is written into an owning layer; do not restate current state in
+  Evolution, and do not store rationale in an index.
+- **History points at state.** A record's `layers:` names the layers it touches
+  and `state:` names the canonical leaf; a cross-layer choice is one record with
+  several `layers:` values.
 
 ## Decision records
 
