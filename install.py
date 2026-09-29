@@ -2,12 +2,14 @@
 """Install a method's skill bundle into a skills directory.
 
     python3 install.py --method product-breakdown
+    python3 install.py --all
     python3 install.py --method product-breakdown --into ~/.config/opencode/skills
     python3 install.py --method product-breakdown --dry-run --force
 
 The default target is project-local: ``.agents/skills/<method>/`` under the
 current working directory. Pass ``--into`` to install elsewhere, for example a
-global ``~/.config/opencode/skills``.
+global ``~/.config/opencode/skills``. Pass ``--all`` instead of ``--method`` to
+install every method bundle found under ``methods/``.
 
 Installation is scoped to the named method's directory only; other skills in
 the target directory are never touched.
@@ -99,9 +101,85 @@ def analyze(dest: Path, src_checksums: dict[str, str]) -> tuple[str, list[str], 
     return ("modified" if changed else "clean"), changed, manifest
 
 
+def available_methods() -> list[str]:
+    """Method names under methods/ that carry a SKILL.md bundle, sorted."""
+    return sorted(
+        p.name
+        for p in (ROOT / "methods").iterdir()
+        if p.is_dir() and (p / "SKILL.md").is_file()
+    )
+
+
+def install_one(method: str, into: Path, force: bool, dry_run: bool) -> int:
+    source = ROOT / "methods" / method
+    dest = into.resolve() / method
+
+    src_checksums = tree_checksums(source)
+    status, modified, _ = analyze(dest, src_checksums)
+
+    if status == "absent":
+        action = "install"
+    elif status == "clean":
+        action = "upgrade"
+    else:
+        action = "overwrite" if force else "skip"
+
+    verb = "would" if dry_run else "will"
+    if status == "absent":
+        print(f"{verb} install {method} -> {dest}")
+    elif status == "clean":
+        print(f"{verb} upgrade {method} -> {dest} (no local changes)")
+    elif status == "modified":
+        print(f"{dest} is locally modified ({len(modified)} files):")
+        for rel in modified:
+            print(f"  {rel}")
+        if action == "skip":
+            print("not installed; use --force to back up and overwrite")
+        else:
+            print(f"{verb} back up the existing bundle and overwrite")
+    elif status == "foreign":
+        print(f"{dest} has no install manifest; not from this repo")
+        if action == "skip":
+            print("not installed; use --force to back up and overwrite")
+        else:
+            print(f"{verb} back up the existing directory and overwrite")
+
+    if dry_run:
+        return 0
+    if action == "skip":
+        return 1
+
+    if status in ("modified", "foreign"):
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        backup = into / f"{method}.backup-{stamp}"
+        shutil.copytree(dest, backup)
+        print(f"backed up -> {backup}")
+
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(source, dest)
+
+    manifest_data = {
+        "method": method,
+        "source": ROOT.name,
+        "source_commit": source_commit(),
+        "installed_at": datetime.now(timezone.utc).isoformat(),
+        "files": src_checksums,
+    }
+    (dest / MANIFEST).write_text(json.dumps(manifest_data, indent=2) + "\n")
+    print(f"installed {method} -> {dest}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--method", required=True, help="method name under methods/")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--method", help="method name under methods/")
+    mode.add_argument(
+        "--all",
+        action="store_true",
+        help="install every method bundle found under methods/",
+    )
     parser.add_argument(
         "--into",
         default=str(DEFAULT_INTO),
@@ -119,71 +197,22 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    source = ROOT / "methods" / args.method
-    if not (source / "SKILL.md").is_file():
-        print(f"no skill bundle at {source}")
-        return 1
-
     into = Path(args.into).expanduser()
     if not into.is_absolute():
         into = Path.cwd() / into
-    dest = into.resolve() / args.method
 
-    src_checksums = tree_checksums(source)
-    status, modified, _ = analyze(dest, src_checksums)
+    if args.all:
+        methods = available_methods()
+        if not methods:
+            print("no skill bundles found under methods/")
+            return 1
+        results = [install_one(m, into, args.force, args.dry_run) for m in methods]
+        failures = sum(1 for r in results if r != 0)
+        if failures:
+            print(f"{failures} of {len(methods)} methods not installed")
+        return 1 if failures else 0
 
-    if status == "absent":
-        action = "install"
-    elif status == "clean":
-        action = "upgrade"
-    else:
-        action = "overwrite" if args.force else "skip"
-
-    verb = "would" if args.dry_run else "will"
-    if status == "absent":
-        print(f"{verb} install {args.method} -> {dest}")
-    elif status == "clean":
-        print(f"{verb} upgrade {args.method} -> {dest} (no local changes)")
-    elif status == "modified":
-        print(f"{dest} is locally modified ({len(modified)} files):")
-        for rel in modified:
-            print(f"  {rel}")
-        if action == "skip":
-            print("not installed; use --force to back up and overwrite")
-        else:
-            print(f"{verb} back up the existing bundle and overwrite")
-    elif status == "foreign":
-        print(f"{dest} has no install manifest; not from this repo")
-        if action == "skip":
-            print("not installed; use --force to back up and overwrite")
-        else:
-            print(f"{verb} back up the existing directory and overwrite")
-
-    if args.dry_run:
-        return 0
-    if action == "skip":
-        return 1
-
-    if status in ("modified", "foreign"):
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        backup = into / f"{args.method}.backup-{stamp}"
-        shutil.copytree(dest, backup)
-        print(f"backed up -> {backup}")
-
-    if dest.exists():
-        shutil.rmtree(dest)
-    shutil.copytree(source, dest)
-
-    manifest_data = {
-        "method": args.method,
-        "source": ROOT.name,
-        "source_commit": source_commit(),
-        "installed_at": datetime.now(timezone.utc).isoformat(),
-        "files": src_checksums,
-    }
-    (dest / MANIFEST).write_text(json.dumps(manifest_data, indent=2) + "\n")
-    print(f"installed {args.method} -> {dest}")
-    return 0
+    return install_one(args.method, into, args.force, args.dry_run)
 
 
 if __name__ == "__main__":

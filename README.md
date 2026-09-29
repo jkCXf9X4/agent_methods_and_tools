@@ -43,6 +43,14 @@ Global (available in every repo):
 python3 install.py --method product-breakdown --into ~/.config/opencode/skills
 ```
 
+Install every method bundle at once with `--all` (same `--into`, `--force`,
+and `--dry-run` apply; each bundle is installed/checked independently and the
+exit code is non-zero if any were skipped):
+
+```bash
+python3 install.py --all
+```
+
 Then the agent loads the skill on demand. The method's tool runs from the
 installed bundle, for example `python3 <skills-dir>/product-breakdown/scripts/pb check --strict`.
 
