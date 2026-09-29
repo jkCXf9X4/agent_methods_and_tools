@@ -47,6 +47,9 @@ prefixes = { intent = "ID", product = "PD", architecture = "AD", implementation 
 # Require id/type/date/status on live leaves, and resolve citations.
 # require = true
 # enforce_citations = true
+# Ids that are known but not yet filed (planned handles, e.g. an IMP cited
+# from a roadmap before it lands as a file). Resolve in citations; no path.
+# reserved_ids = ["IMP-007", "IMP-008"]
 
 [records]
 # Required body sections, in order.

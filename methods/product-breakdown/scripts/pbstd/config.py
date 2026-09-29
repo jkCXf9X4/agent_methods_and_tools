@@ -104,6 +104,10 @@ DEFAULTS: dict = {
         "require": True,
         # Resolve every registered-prefix ID token in body text (check_ids).
         "enforce_citations": True,
+        # Ids that are known but not yet filed (planned handles, e.g. an IMP
+        # referenced from a roadmap before it lands). They resolve in
+        # citations but have no path.
+        "reserved_ids": [],
     },
     # Generated index navigation: each index's Contents list is rebuilt from
     # direct-child front-matter so moves never require editing links by hand.

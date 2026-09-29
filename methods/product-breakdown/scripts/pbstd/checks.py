@@ -16,6 +16,16 @@ from .records import (
 )
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+FENCE_RE = re.compile(r"```.*?```", re.S)
+
+
+def without_fences(text: str) -> str:
+    """Body text with fenced code blocks removed.
+
+    Link and citation rules apply to authorial prose, not to code examples
+    that legitimately show markdown syntax (``[x](y.md)`` as sample input).
+    """
+    return FENCE_RE.sub("", text)
 
 
 def check_decisions(cfg: Config, strict: bool, glob: str = "*.md") -> int:
@@ -276,7 +286,7 @@ def check_leaves(cfg: Config, strict: bool) -> int:
                     if not str(data.get(key, "")).strip():
                         violations.append(f"{rel}: missing front-matter key '{key}'")
         if enforce_links:
-            for link in re.finditer(r"\]\(([^)]+)\)", body):
+            for link in re.finditer(r"\]\(([^)]+)\)", without_fences(body)):
                 target = link.group(1).strip()
                 if target.startswith(("http://", "https://", "mailto:", "#")):
                     continue
@@ -334,19 +344,25 @@ def check_ids(cfg: Config, strict: bool) -> int:
             continue
         if cfg.decisions.exists() and path.is_relative_to(cfg.decisions) and rel.name in record_skip:
             continue  # templates/README inside decisions/ carry no real id
-        if rel.name.startswith(".") or is_generated(path, marker) or is_exempt(rel, exempt):
+        if rel.name.startswith(".") or is_generated(path, marker):
             continue
         data, body = parse_front_matter(path.read_text(encoding="utf-8"))
         if data is None:
             continue
         ident = str(data.get(id_key, "")).strip()
         if ident:
+            # The id registry is global: ids under exempt subtrees (e.g. a
+            # grandfathered per-layer decisions/ folder at a different path)
+            # still register, so existing citations of them keep resolving.
+            # Exempt affects the leaf-shape rules below, never the registry.
             if ident in known:
                 violations.append(f"duplicate id '{ident}': {known[ident]} and {rel}")
             else:
                 known[ident] = rel
             if not ID_RE.match(ident):
                 violations.append(f"{rel}: id '{ident}' is not <PREFIX>-<NNN>")
+        if is_exempt(rel, exempt):
+            continue
         if rel.name in index_names:
             continue
         if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
@@ -372,9 +388,20 @@ def check_ids(cfg: Config, strict: bool) -> int:
                 violations.append(f"{rel}: invalid leaf status '{status_val}'")
         candidates.append((rel, body))
 
+    for reserved in cfg.get("ids", "reserved_ids", default=[]):
+        rid = str(reserved).strip()
+        if not rid:
+            continue
+        if not ID_RE.match(rid):
+            violations.append(f"reserved id '{rid}' is not <PREFIX>-<NNN>")
+        elif rid in known:
+            violations.append(f"reserved id '{rid}' duplicates {known[rid]}")
+        else:
+            known[rid] = Path("<reserved>")
+
     if enforce_citations:
         for rel, body in candidates:
-            for match in cite_re.finditer(body):
+            for match in cite_re.finditer(without_fences(body)):
                 token = match.group(0)
                 if token not in known:
                     violations.append(f"{rel}: citation '{token}' does not resolve to a known id")

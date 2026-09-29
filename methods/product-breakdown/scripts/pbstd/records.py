@@ -5,6 +5,22 @@ import re
 from pathlib import Path
 
 
+def _strip_quotes(value: str) -> str:
+    """Strip one pair of matching single/double quotes around a scalar.
+
+    ``title: "Plan — Why"`` parses to ``Plan — Why``, matching how a YAML
+    reader would interpret the double-quoted scalar (without needing a YAML
+    dependency).
+    """
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        inner = value[1:-1]
+        if value[0] == '"':
+            inner = inner.replace('\\"', '"')
+        return inner
+    return value
+
+
 def parse_front_matter(text: str) -> tuple[dict | None, str]:
     """Return ``(front_matter, body)``; front matter is ``None`` if absent."""
     if not text.startswith("---"):
@@ -15,16 +31,28 @@ def parse_front_matter(text: str) -> tuple[dict | None, str]:
         return None, text
     data: dict = {}
     key = None
-    for raw in lines[1:end]:
+    for index, raw in enumerate(lines[1:end]):
         if not raw.strip():
             continue
         head = re.match(r"^([A-Za-z_]+):\s*(.*)$", raw)
         if head:
             key = head.group(1)
-            val = head.group(2).strip()
+            val = _strip_quotes(head.group(2))
             if val.startswith("[") and val.endswith("]"):
                 inner = val[1:-1].strip()
                 data[key] = [x.strip() for x in inner.split(",") if x.strip()]
+            elif val in (">", "|", ">-", "|-", ">+", "|+"):
+                # YAML block scalar: collect the following indented lines
+                # (blank lines inside the block are skipped, not terminator).
+                folded: list[str] = []
+                for raw2 in lines[index + 2 : end]:
+                    if raw2[:1] in (" ", "\t"):
+                        folded.append(raw2.strip())
+                    elif not raw2.strip():
+                        continue
+                    else:
+                        break
+                data[key] = (" ".join(folded) if val.startswith(">") else "\n".join(folded)).strip()
             elif val:
                 data[key] = val
             else:
@@ -34,7 +62,7 @@ def parse_front_matter(text: str) -> tuple[dict | None, str]:
             if item and key:
                 if not isinstance(data.get(key), list):
                     data[key] = []
-                data[key].append(item.group(1).strip())
+                data[key].append(_strip_quotes(item.group(1).strip()))
     return data, "\n".join(lines[end + 1:])
 
 

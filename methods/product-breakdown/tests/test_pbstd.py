@@ -187,6 +187,22 @@ def test_parse_front_matter_lists():
     assert "## Context" in body
 
 
+def test_parse_front_matter_strips_quotes():
+    data, _ = parse_front_matter('---\ntitle: "Plan — Why a Layer"\nnote: \'single\'\n---\n\nBody\n')
+    assert data["title"] == "Plan — Why a Layer"
+    assert data["note"] == "single"
+
+
+def test_parse_front_matter_folded_scalar():
+    text = (
+        "---\nsummary: >\n  What separates Dynamic Harness from other harnesses:\n"
+        "  mechanically-enforced guarantees.\nrelated:\n  - ../VISION.md\n---\n\nBody\n"
+    )
+    data, _ = parse_front_matter(text)
+    assert data["summary"] == "What separates Dynamic Harness from other harnesses: mechanically-enforced guarantees."
+    assert data["related"] == ["../VISION.md"]
+
+
 # --- generated index Contents (link-minimization) ---
 
 _ID_COUNTER = [0]
@@ -288,6 +304,32 @@ def test_check_leaves_allows_links_in_index(tmp_path):
     assert check_leaves(cfg, strict=True) == 0
 
 
+def test_check_leaves_ignores_links_inside_fenced_code(tmp_path):
+    root = make_layer(tmp_path)
+    leaf = root / "02-architecture" / "delegation-model.md"
+    leaf.write_text(
+        leaf.read_text(encoding="utf-8").replace(
+            "Current state.",
+            "Example:\n\n```markdown\n[link](../other.md)\n```\n",
+        ),
+        encoding="utf-8",
+    )
+    assert check_leaves(load_config(root), strict=True) == 0
+
+
+def test_check_ids_ignores_citations_inside_fenced_code(tmp_path):
+    root = make_layer(tmp_path)
+    leaf = root / "02-architecture" / "delegation-model.md"
+    leaf.write_text(
+        leaf.read_text(encoding="utf-8").replace(
+            "Current state.",
+            "```\ncitation `INFO-999`\n```\n",
+        ),
+        encoding="utf-8",
+    )
+    assert check_ids(load_config(root), strict=True) == 0
+
+
 def test_check_leaves_ignores_generated_and_decisions(tmp_path):
     root = make_layer(tmp_path)
     (root / "decisions" / "AD-001-example-choice.md").write_text(RECORD, encoding="utf-8")
@@ -381,6 +423,55 @@ def test_check_ids_flags_unresolved_citation(tmp_path):
             path.read_text(encoding="utf-8").replace("Current state.", "See `INFO-999`."),
             encoding="utf-8",
         )
+    assert check_ids(load_config(root), strict=True) == 1
+
+
+def test_check_ids_registers_ids_in_exempt_subtree(tmp_path):
+    """A grandfathered node in an exempt folder still registers its id.
+
+    Its id must resolve from live leaves (existing prose keeps working), while
+    the exempt file itself skips the leaf-shape rules — it may stay legacy.
+    """
+    root = make_layer(tmp_path)
+    (root / "02-architecture" / "legacy").mkdir(parents=True)
+    (root / "02-architecture" / "legacy" / "AD-009.md").write_text(
+        "---\nid: AD-009\ntype: decision\ntitle: Node model\nstatus: accepted\n---\n\n"
+        "# AD-009: Node Model\n\n## Status\nAccepted\n",
+        encoding="utf-8",
+    )
+    (root / "pb.toml").write_text(
+        '[nodes]\nexempt = ["02-architecture/legacy"]\n', encoding="utf-8"
+    )
+    for path in root.rglob("delegation-model.md"):
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("Current state.", "Enforced by `AD-009`."),
+            encoding="utf-8",
+        )
+    assert check_ids(load_config(root), strict=True) == 0
+
+
+def test_check_ids_reserved_ids_resolve(tmp_path, capsys):
+    root = make_layer(tmp_path)
+    (root / "pb.toml").write_text(
+        '[ids]\nreserved_ids = ["IMP-015"]\n', encoding="utf-8"
+    )
+    for path in root.rglob("delegation-model.md"):
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("Current state.", "Tracked as `IMP-015`."),
+            encoding="utf-8",
+        )
+    assert check_ids(load_config(root), strict=True) == 0
+
+
+def test_check_ids_reserved_duplicate(tmp_path):
+    root = make_layer(tmp_path)
+    (root / "02-architecture" / "real.md").write_text(
+        "---\nid: INFO-001\ntype: info\ntitle: R\nsummary: S\ndate: 2026-09-29\nstatus: current\n---\n\n# R\n",
+        encoding="utf-8",
+    )
+    (root / "pb.toml").write_text(
+        '[ids]\nreserved_ids = ["INFO-001"]\n', encoding="utf-8"
+    )
     assert check_ids(load_config(root), strict=True) == 1
 
 
