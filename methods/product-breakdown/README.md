@@ -18,7 +18,7 @@ drift. Full reasoning: [`guidelines/workflow-rationale.md`](guidelines/workflow-
 | Path | Purpose |
 |---|---|
 | [`SKILL.md`](SKILL.md) | Agent entrypoint |
-| [`guidelines/`](guidelines/) | Canonical rules: storage, readability, pipeline, traceability, checklist, rationale |
+| [`guidelines/`](guidelines/) | Canonical rules: storage, readability, pipeline, traceability, checklist, deprecation, rationale |
 | [`templates/pb.toml`](templates/pb.toml) | Config schema; only needed to override defaults |
 | [`templates/TEMPLATE.md`](templates/TEMPLATE.md) | Decision-record template |
 | [`scripts/pb`](scripts/pb) | The tool: `check`, `node-size`, `registers`, `doctor` |

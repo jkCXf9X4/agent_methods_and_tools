@@ -34,6 +34,7 @@ All paths are relative to this skill's base directory.
 | Writing form | `guidelines/readability-rules.md` |
 | Idea → IMP → decision → task; gates | `guidelines/change-pipeline.md` |
 | Leaf → decision → artifact chain | `guidelines/traceability-rules.md` |
+| Deprecated files: move to `deprecated/`, leave links stale | `guidelines/deprecated-files.md` |
 | Before/after edit steps | `guidelines/edit-checklist.md` |
 | Record shape | `templates/TEMPLATE.md` |
 | Config schema (only if overriding defaults) | `templates/pb.toml` |

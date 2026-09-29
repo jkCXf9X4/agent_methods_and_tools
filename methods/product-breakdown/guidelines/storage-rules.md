@@ -10,6 +10,9 @@ How information is stored in `product-breakdown/`.
   (`decisions/`) holds dated **history and rationale**; Evolution holds
   **candidates** for change. Do not re-describe current state in Evolution, and
   do not store rationale inside an index.
+- A file that is no longer current is **moved to a `deprecated/` subfolder**
+  and any links or status info pointing from it are left stale (never chased) —
+  see [deprecated-files.md](deprecated-files.md).
 - Information flows downward only (Intent → Product → Architecture →
   Implementation → Verification → Operation). Do not push design detail up.
 
