@@ -186,6 +186,8 @@ def check_node_size(cfg: Config, strict: bool) -> int:
         rel = path.relative_to(cfg.root)
         if rel.parts and rel.parts[0] in exclude_dirs:
             continue
+        if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
+            continue  # records are governed by check_decisions' section budgets
         if is_exempt(rel, exempt) or is_generated(path, marker):
             continue
         text = path.read_text(encoding="utf-8")

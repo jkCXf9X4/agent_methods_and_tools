@@ -91,10 +91,38 @@ def test_generate_writes_registers(tmp_path):
     assert "## Decisions" in (cfg.root / "leaf.md").read_text(encoding="utf-8")
 
 
+def test_generate_skips_disabled_register_targets(tmp_path):
+    """An empty [registers] target disables that generated register, so a repo
+    that keeps a hand-written register (legacy decisions without records yet)
+    is not clobbered by a generated duplicate."""
+    root = make_breakdown(tmp_path)
+    (root / "pb.toml").write_text(
+        '[registers]\nlog = ""\ntraceability = ""\n', encoding="utf-8"
+    )
+    assert generate(load_config(root)) == 0
+    assert (root / "decisions" / "README.md").exists()
+    assert not (root / "design-choice-log.md").exists()
+    assert not (root / "traceability-map.md").exists()
+
+
 def test_node_size_flags_oversize_leaf(tmp_path):
     root = make_breakdown(tmp_path)
     (root / "big.md").write_text("\n".join(f"line {i}" for i in range(120)), encoding="utf-8")
     assert check_node_size(load_config(root), strict=True) == 1
+
+
+def test_node_size_skips_records(tmp_path):
+    """Records are sized by their section budgets in check_decisions, not by
+    the leaf budget: a long record under decisions/ must not fail node-size."""
+    root = make_breakdown(tmp_path)
+    (root / "decisions" / "AD-002-long-background.md").write_text(
+        "---\nid: AD-002\ntitle: Long\n"
+        + "date: 2026-09-22\nstatus: accepted\nlayers: [architecture]\nstate: \nartifacts: []\n"
+        + "supersedes: []\nsuperseded_by: []\nrelated: []\n---\n\n"
+        + "\n".join(f"line {i}" for i in range(140)),
+        encoding="utf-8",
+    )
+    assert check_node_size(load_config(root), strict=True) == 0
 
 
 def test_node_size_three_tiers(tmp_path, capsys):

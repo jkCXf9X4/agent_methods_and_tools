@@ -271,10 +271,18 @@ def generate(cfg: Config, out_dir=None, sync_footers_flag: bool = False) -> int:
     out_dir = Path(out_dir).resolve() if out_dir else cfg.root
     records = load_records(cfg)
     if records:
+        targets = [
+            ("index", render_index),
+            ("log", render_log),
+            ("traceability", render_traceability),
+        ]
+        # An empty target disables that register: a repo keeping a hand-written
+        # register (e.g. a legacy decision log covering not-yet-recorded
+        # choices) can keep it canonical and skip the generated duplicate.
         outputs = {
-            out_dir / cfg.get("registers", "index"): render_index(cfg, records),
-            out_dir / cfg.get("registers", "log"): render_log(cfg, records),
-            out_dir / cfg.get("registers", "traceability"): render_traceability(cfg, records),
+            out_dir / target: render(cfg, records)
+            for key, render in targets
+            if (target := cfg.get("registers", key))
         }
         for path, text in outputs.items():
             path.parent.mkdir(parents=True, exist_ok=True)
