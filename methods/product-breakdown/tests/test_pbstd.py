@@ -556,3 +556,53 @@ def test_next_id_pads_and_continues(tmp_path):
     make_leaf(root / "02-architecture" / "b.md", "B", "B", ident="INFO-009")
     assert next_id(load_config(root), "info") == "INFO-010"
     assert next_id(load_config(root), "eval") == "EVAL-001"
+
+
+def test_next_id_additional_prefix_types(tmp_path):
+    root = _min_root(tmp_path)
+    cfg = load_config(root)
+    for type_, expected in [
+        ("research-question", "RQ-001"),
+        ("constraint", "CON-001"),
+        ("trace", "TR-001"),
+        ("capability", "CP-001"),
+        ("requirement", "REQ-001"),
+        ("test", "TEST-001"),
+    ]:
+        assert next_id(cfg, type_) == expected, type_
+
+
+def test_scaffold_additional_type_prefix(tmp_path):
+    root = _min_root(tmp_path)
+    cfg = load_config(root)
+    rel, ident, text = scaffold_leaf(
+        cfg, "02-architecture", "Acceptance test", summary="How it is verified", type_="test"
+    )
+    assert ident == "TEST-001"
+    assert rel == Path("02-architecture/acceptance-test.md")
+    assert "id: TEST-001" in text and "type: test" in text
+
+
+def test_check_ids_resolves_citations_for_additional_prefixes(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "02-architecture" / "t.md", "Test", "Verify", ident="TEST-001", type_="test"
+    )
+    make_leaf(
+        root / "02-architecture" / "c.md",
+        "Capability",
+        "Promise",
+        ident="CP-001",
+        type_="capability",
+        body="Verified by `TEST-001` per `REQ-001`.",
+    )
+    # REQ-001 is a planned requirement; reserve it so the citation resolves.
+    (root / "pb.toml").write_text('[ids]\nreserved_ids = ["REQ-001"]\n', encoding="utf-8")
+    assert check_ids(load_config(root), strict=True) == 0
+
+
+def test_check_ids_rejects_unknown_leaf_type(tmp_path, capsys):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "x.md", "X", "X", ident="INFO-001", type_="bogus")
+    assert check_ids(load_config(root), strict=True) == 1
+    assert "unknown leaf type 'bogus'" in capsys.readouterr().out
