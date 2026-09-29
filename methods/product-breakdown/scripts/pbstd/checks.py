@@ -121,6 +121,11 @@ def is_generated(path: Path, marker: str) -> bool:
     return bool(marker) and marker in read_first_line(path)
 
 
+# Front-matter key a node can use to exempt itself from the node budget.
+EXEMPT_KEY = "pb_exempt"
+_FALSY = {"false", "no", "off", "0", "none", "null", "[]"}
+
+
 def is_exempt(rel: Path, exempt: set[str]) -> bool:
     """Node-budget exemption test against the relative path from the root.
 
@@ -145,19 +150,38 @@ def is_exempt(rel: Path, exempt: set[str]) -> bool:
     return False
 
 
+def is_frontmatter_exempt(text: str) -> bool:
+    """True when the node exempts itself via ``pb_exempt`` in its front matter.
+
+    The exemption is opt-in per file: a truthy ``pb_exempt`` value (anything
+    but ``false``/``no``/``off``/``0``/``none``/``null``) skips the node budget
+    entirely, complementing the path-based ``[nodes] exempt`` config list.
+    """
+    data, _ = parse_front_matter(text)
+    if not data:
+        return False
+    value = data.get(EXEMPT_KEY)
+    if value is None or value == []:
+        return False
+    return str(value).strip().lower() not in _FALSY
+
+
 def check_node_size(cfg: Config, strict: bool) -> int:
     index_names = set(cfg.get("layout", "index_names"))
     exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
     marker = cfg.get("layout", "generated_marker")
     exempt = set(cfg.get("nodes", "exempt"))
-    index_target = cfg.get("nodes", "index_target")
-    index_cap = cfg.get("nodes", "index_cap")
-    leaf_target = cfg.get("nodes", "leaf_target")
-    leaf_cap = cfg.get("nodes", "leaf_cap")
+    index_goal = cfg.get("nodes", "index_goal")
+    index_warning = cfg.get("nodes", "index_warning")
+    index_strict = cfg.get("nodes", "index_strict")
+    leaf_goal = cfg.get("nodes", "leaf_goal")
+    leaf_warning = cfg.get("nodes", "leaf_warning")
+    leaf_strict = cfg.get("nodes", "leaf_strict")
     leaf_min = cfg.get("nodes", "leaf_min")
 
     violations: list[tuple[Path, int, str]] = []
     warnings: list[tuple[Path, int, str]] = []
+    notices: list[tuple[Path, int, str]] = []
     shorts: list[tuple[Path, int]] = []
 
     for path in sorted(cfg.root.rglob("*.md")):
@@ -166,27 +190,44 @@ def check_node_size(cfg: Config, strict: bool) -> int:
             continue
         if is_exempt(rel, exempt) or is_generated(path, marker):
             continue
-        lines = sum(1 for _ in path.open(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+        if is_frontmatter_exempt(text):
+            continue
+        lines = len(text.splitlines())
         if rel.name in index_names:
-            if lines > index_cap:
-                violations.append((rel, lines, f"index cap {index_cap}"))
-            elif lines > index_target:
-                warnings.append((rel, lines, f"index target {index_target}"))
+            if lines > index_strict:
+                violations.append((rel, lines, f"exceeds index strict {index_strict}"))
+            elif lines > index_warning:
+                warnings.append(
+                    (rel, lines, f"over index warning {index_warning}, under strict {index_strict}")
+                )
+            elif lines > index_goal:
+                notices.append(
+                    (rel, lines, f"over index goal {index_goal}, under warning {index_warning}")
+                )
         else:
-            if lines > leaf_cap:
-                violations.append((rel, lines, f"leaf cap {leaf_cap}"))
-            elif lines > leaf_target:
-                warnings.append((rel, lines, f"leaf target {leaf_target}"))
+            if lines > leaf_strict:
+                violations.append((rel, lines, f"exceeds leaf strict {leaf_strict}"))
+            elif lines > leaf_warning:
+                warnings.append(
+                    (rel, lines, f"over leaf warning {leaf_warning}, under strict {leaf_strict}")
+                )
+            elif lines > leaf_goal:
+                notices.append(
+                    (rel, lines, f"over leaf goal {leaf_goal}, under warning {leaf_warning}")
+                )
             if lines < leaf_min:
                 shorts.append((rel, lines))
 
     for rel, lines, rule in violations:
         print(f"HARD  {lines:>4}  {rel}  ({rule})")
     for rel, lines, rule in warnings:
-        print(f"warn  {lines:>4}  {rel}  (over {rule}, under cap)")
+        print(f"warn  {lines:>4}  {rel}  ({rule})")
+    for rel, lines, rule in notices:
+        print(f"info  {lines:>4}  {rel}  ({rule})")
     for rel, lines in shorts:
         print(f"short {lines:>3}  {rel}  (below min {leaf_min})")
 
-    if not violations and not warnings and not shorts:
+    if not violations and not warnings and not notices and not shorts:
         print("All nodes within budget.")
     return 1 if strict and violations else 0

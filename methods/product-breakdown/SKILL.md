@@ -102,6 +102,15 @@ cross-layer choice is one record with several `layers:` values.
 `registers --sync-footers` writes the index, changelog, traceability map, and each
 `state:` leaf's `## Decisions` footer. Never hand-edit the output.
 
+## Node size budget
+
+Three tiers per node (AD-009), enforced by `node-size --strict`: leaf goal 50 /
+warning 75 / strict 100 lines (index: 40/50/75). At or under goal is silent;
+over goal → `info`; over warning → `warn`; over strict → `HARD` (fails
+`--strict`). A node can exempt itself with `pb_exempt: true` in its front
+matter — reserve for genuinely long reference material; the default remedy is
+trim → link → split.
+
 ## Commands
 
 Run from the breakdown's repository root; paths are relative to this skill's base

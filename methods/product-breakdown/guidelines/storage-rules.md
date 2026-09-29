@@ -29,13 +29,22 @@ How information is stored in `product-breakdown/`.
 
 ## Node Budget (AD-009)
 
-- **Index node** (one per folder/layer, `README.md`): target ≤40 lines, hard
-  cap 75; purpose, owns/excludes, a `link → one-line description` table,
+Three size tiers per node, enforced by `scripts/pb node-size --strict`:
+
+- **Index node** (one per folder/layer, `README.md`): goal ≤40 lines, warning
+  50, strict 75; purpose, owns/excludes, a `link → one-line description` table,
   decisions pointer. No rationale or substantive detail.
-- **Leaf node**: one concern; target ≤50 lines, hard cap 75, minimum ~10 lines
-  of unique content.
-- Over cap → **trim** material owned elsewhere, **link** instead of repeat, then
-  **split** along a concern seam. Keep exactly one canonical leaf per fact.
+- **Leaf node**: one concern; goal ≤50 lines, warning 75, strict 100, minimum
+  ~10 lines of unique content.
+- At or under the goal → silent; over the goal → `info`; over the warning →
+  `warn`; over the strict tier → `HARD`, which fails `node-size --strict`
+  (exit 1).
+- A node can exempt itself from the node budget by declaring `pb_exempt: true`
+  in its front matter — the front-matter counterpart to the path-based
+  `[nodes] exempt` config list. Reserve it for genuinely long reference
+  material; the default remedy is trim → link → split.
+- Over strict → **trim** material owned elsewhere, **link** instead of repeat,
+  then **split** along a concern seam. Keep exactly one canonical leaf per fact.
 - Never split a decision record; tighten it or supersede it.
 - A decision record leads with `Context`, `Decision` (dated, past tense), and
   `Rationale`; it never states current state. `Decision` target ≤4 lines (cap 6);

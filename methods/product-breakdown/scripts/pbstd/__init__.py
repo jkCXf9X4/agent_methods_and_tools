@@ -12,4 +12,4 @@ to consume the standard from another repository.
 from .config import Config, find_root, load_config, resolve_root
 
 __all__ = ["Config", "find_root", "load_config", "resolve_root"]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

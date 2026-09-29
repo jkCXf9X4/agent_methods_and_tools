@@ -33,11 +33,12 @@ def decisions_main(default_root=None, argv=None) -> int:
 
 def node_size_main(default_root=None, argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="pb-node-size", description="Check the node size budget (AD-009)."
+        prog="pb-node-size",
+        description="Check the three-tier node size budget (AD-009): goal / warning / strict.",
     )
     _common(parser)
     parser.add_argument(
-        "--strict", action="store_true", help="exit non-zero when a node exceeds its hard cap"
+        "--strict", action="store_true", help="exit non-zero when a node exceeds its strict tier"
     )
     args = parser.parse_args(argv)
     cfg = load_config(resolve_root(args.root, default_root), args.config)

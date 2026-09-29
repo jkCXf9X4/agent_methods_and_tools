@@ -5,7 +5,7 @@
 # authoritative if the two ever disagree.
 
 [layout]
-# Files treated as index nodes (target/cap in [nodes]).
+# Files treated as index nodes (goal/warning/strict in [nodes]).
 index_names = ["README.md", "WORKING-GUIDELINES.md"]
 # Subdirectory of the breakdown root holding the flat decision stream.
 decisions_dir = "decisions"
@@ -36,16 +36,23 @@ required_keys = ["id", "title", "date", "status", "layers", "state", "artifacts"
 budgets = { Context = [5, 8], Decision = [4, 6], Rationale = [5, 8] }
 
 [nodes]
-index_target = 40
-index_cap = 75
-leaf_target = 50
-leaf_cap = 75
+# Three size tiers per node kind. At or under goal is silent; over goal →
+# `info`; over warning → `warn`; over strict → `HARD` (fails `node-size --strict`).
+index_goal = 40
+index_warning = 50
+index_strict = 75
+leaf_goal = 50
+leaf_warning = 75
+leaf_strict = 100
 leaf_min = 10
 # Filenames and folders always exempt from the node budget. A bare name (file
 # or folder) matches on any path component, so a folder entry exempts that
 # folder's whole subtree under the root; a "dir" or "dir/sub" entry with a
 # slash pins one exact nested folder.
 exempt = ["design-choice-log.md", "traceability-map.md"]
+# A node can also exempt itself via front matter: add `pb_exempt: true` to its
+# YAML block. Opt-in per file, for genuinely long reference material — the
+# default remedy is still trim → link → split.
 
 [registers]
 index = "decisions/README.md"
@@ -53,3 +60,21 @@ log = "design-choice-log.md"
 traceability = "traceability-map.md"
 log_title = "Decision Log"
 banner = "<!-- GENERATED FILE — do not edit. Regenerate with pb-registers. -->"
+
+[indexes]
+# Generated navigation: each index's Contents list is rebuilt from direct-child
+# front-matter, so moving a leaf never requires a hand link-sweep. Disable to
+# keep indexes fully hand-written (not recommended).
+enabled = true
+# Heading whose list is regenerated (searched with `## ` prefix).
+# section = "Contents"
+# Markers bracketing the generated list inside that section.
+# start_marker = "<!-- pb:index:start -->"
+# end_marker = "<!-- pb:index:end -->"
+# Front-matter keys used for the row label and one-line description.
+# title_key = "title"
+# summary_key = "summary"
+# Leaf checks (run by `pb check`): live leaves must carry title/summary
+# front-matter and must cite other nodes by ID, never by a markdown path link.
+# require_leaf_frontmatter = true
+# enforce_id_citations = true

@@ -65,10 +65,13 @@ DEFAULTS: dict = {
         "budgets": {"Context": [5, 8], "Decision": [4, 6], "Rationale": [5, 8]},
     },
     "nodes": {
-        "index_target": 40,
-        "index_cap": 75,
-        "leaf_target": 50,
-        "leaf_cap": 75,
+        # Three size tiers per node kind: goal / warning / strict (hard).
+        "index_goal": 40,
+        "index_warning": 50,
+        "index_strict": 75,
+        "leaf_goal": 50,
+        "leaf_warning": 75,
+        "leaf_strict": 100,
         "leaf_min": 10,
         "exempt": ["design-choice-log.md", "traceability-map.md"],
     },
@@ -78,6 +81,23 @@ DEFAULTS: dict = {
         "traceability": "traceability-map.md",
         "log_title": "Decision Log",
         "banner": "<!-- GENERATED FILE — do not edit. Regenerate with pb-registers. -->",
+    },
+    # Generated index navigation: each index's Contents list is rebuilt from
+    # direct-child front-matter so moves never require editing links by hand.
+    "indexes": {
+        "enabled": True,
+        # Heading whose list is regenerated (searched with `## ` prefix).
+        "section": "Contents",
+        # Markers bracketing the generated list inside that section.
+        "start_marker": "<!-- pb:index:start -->",
+        "end_marker": "<!-- pb:index:end -->",
+        # Front-matter keys used for the row label and one-line description.
+        "title_key": "title",
+        "summary_key": "summary",
+        # Leaf checks: live leaves must carry title/summary front-matter and
+        # must cite other nodes by ID, never by a markdown path link.
+        "require_leaf_frontmatter": True,
+        "enforce_id_citations": True,
     },
 }
 
