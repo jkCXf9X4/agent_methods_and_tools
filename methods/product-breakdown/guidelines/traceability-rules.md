@@ -14,10 +14,13 @@ chain is **generated**, not hand-maintained.
 
 - Every record MUST set `state:` to an existing leaf and list `artifacts:` as
   concrete repo-relative paths. Enforced by `scripts/pb check`.
+- Leaves cite governing records **by ID** (``AD-012`` in a bullet, or the
+  auto-generated `## Decisions` footer); the map resolves ID → leaf → artifacts.
 - When a choice affects different artifacts, update the record's `artifacts:` and
   regenerate; do not hand-edit the map.
 - If a canonical artifact or leaf is renamed, update the record(s) in the same
-  change and regenerate.
+  change and regenerate — leaf moves cost exactly this, plus
+  `registers --sync-footers` for the index `## Contents` lists.
 
 ## Reverse Traceability (artifact → decision)
 

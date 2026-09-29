@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pbstd.checks import check_decisions, check_node_size
+from pbstd.checks import check_decisions, check_ids, check_leaves, check_node_size
 from pbstd.config import DEFAULTS, find_root, load_config
 from pbstd.records import parse_front_matter
-from pbstd.registers import generate
+from pbstd.registers import generate, sync_indexes
 
 RECORD = """---
 id: AD-001
@@ -185,3 +185,255 @@ def test_parse_front_matter_lists():
     assert data["layers"] == ["architecture"]
     assert data["artifacts"] == ["product-breakdown/leaf.md"]
     assert "## Context" in body
+
+
+# --- generated index Contents (link-minimization) ---
+
+_ID_COUNTER = [0]
+
+
+def make_leaf(
+    path: Path,
+    title: str,
+    summary: str,
+    body: str = "Current state.",
+    ident: str | None = None,
+    type_: str = "info",
+    date: str = "2026-09-29",
+    status: str = "current",
+) -> None:
+    _ID_COUNTER[0] += 1
+    ident = ident or f"INFO-{_ID_COUNTER[0]:03d}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nid: {ident}\ntype: {type_}\ntitle: {title}\nsummary: {summary}\n"
+        f"date: {date}\nstatus: {status}\n---\n\n# {title}\n\n{body}\n",
+        encoding="utf-8",
+    )
+
+
+def make_layer(tmp_path: Path, with_frontmatter: bool = True) -> Path:
+    root = tmp_path / "product-breakdown"
+    (root / "decisions").mkdir(parents=True)
+    (root / "02-architecture").mkdir(parents=True)
+    (root / "pb.toml").write_text("", encoding="utf-8")
+    (root / "02-architecture" / "README.md").write_text(
+        "# Architecture\n\n## Owns\n- organizing design\n\n## Contents\n- [stale](stale.md) — old\n",
+        encoding="utf-8",
+    )
+    leaf_p = root / "02-architecture" / "delegation-model.md"
+    if with_frontmatter:
+        make_leaf(leaf_p, "Delegation model", "How parents decompose work")
+    else:
+        leaf_p.write_text("# Delegation model\n\nPlain leaf, no front-matter.\n", encoding="utf-8")
+    return root
+
+
+def test_sync_indexes_rebuilds_contents_from_frontmatter(tmp_path):
+    cfg = load_config(make_layer(tmp_path))
+    leaf_p = cfg.root / "02-architecture" / "delegation-model.md"
+    make_leaf(leaf_p, "Delegation model", "How parents decompose work", ident="INFO-042")
+    changed = sync_indexes(cfg)
+    assert changed == ["02-architecture/README.md"]
+    index = (cfg.root / "02-architecture" / "README.md").read_text(encoding="utf-8")
+    assert (
+        "- **INFO-042** [Delegation model](delegation-model.md) — How parents decompose work"
+        in index
+    )
+    assert "[stale](stale.md)" not in index
+    # repeated syncs are stable
+    assert sync_indexes(cfg) == []
+
+
+def test_sync_indexes_skips_index_without_contents_section(tmp_path):
+    root = tmp_path / "product-breakdown"
+    (root / "02-architecture").mkdir(parents=True)
+    (root / "pb.toml").write_text("", encoding="utf-8")
+    make_leaf(root / "02-architecture" / "leaf.md", "Leaf", "Summary")
+    (root / "02-architecture" / "README.md").write_text(
+        "# Architecture\n\nNo Contents heading here.\n", encoding="utf-8"
+    )
+    cfg = load_config(root)
+    assert sync_indexes(cfg) == []
+    assert "pb:index" not in (cfg.root / "02-architecture" / "README.md").read_text(encoding="utf-8")
+
+
+def test_generate_syncs_indexes_and_footers(tmp_path):
+    cfg = load_config(make_layer(tmp_path))
+    assert generate(cfg, sync_footers_flag=True) == 0
+    index = (cfg.root / "02-architecture" / "README.md").read_text(encoding="utf-8")
+    assert "pb:index:start" in index and "Delegation model" in index
+
+
+def test_check_leaves_requires_frontmatter(tmp_path):
+    cfg = load_config(make_layer(tmp_path, with_frontmatter=False))
+    assert check_leaves(cfg, strict=True) == 1
+
+
+def test_check_leaves_rejects_path_link_in_leaf(tmp_path):
+    root = make_layer(tmp_path)
+    leaf = root / "02-architecture" / "delegation-model.md"
+    leaf.write_text(
+        leaf.read_text(encoding="utf-8").replace(
+            "Current state.", "See [other.md](other.md)."
+        ),
+        encoding="utf-8",
+    )
+    assert check_leaves(load_config(root), strict=True) == 1
+
+
+def test_check_leaves_allows_links_in_index(tmp_path):
+    cfg = load_config(make_layer(tmp_path))
+    # the index keeps its hand-written Table-of-Contents style links
+    assert check_leaves(cfg, strict=True) == 0
+
+
+def test_check_leaves_ignores_generated_and_decisions(tmp_path):
+    root = make_layer(tmp_path)
+    (root / "decisions" / "AD-001-example-choice.md").write_text(RECORD, encoding="utf-8")
+    cfg = load_config(root)
+    assert check_leaves(cfg, strict=True) == 0
+
+
+def test_node_size_excludes_generated_index_region(tmp_path):
+    root = make_layer(tmp_path)
+    cfg = load_config(root)
+    sync_indexes(cfg)
+    index = root / "02-architecture" / "README.md"
+    text = index.read_text(encoding="utf-8")
+    start, end = "<!-- pb:index:start -->", "<!-- pb:index:end -->"
+    fat = start + "\n" + "\n".join(f"- [f{i}](f{i}.md) — filler" for i in range(500)) + "\n" + end
+    index.write_text(
+        text[: text.index(start)] + fat + text[text.index(end) + len(end):],
+        encoding="utf-8",
+    )
+    assert check_node_size(cfg, strict=True) == 0
+
+
+# --- stable leaf ids (INFO-/EVAL-), uniqueness, citations, scaffolding ---
+
+from pbstd.ids import backfill_leaves, next_id, scaffold_leaf  # noqa: E402
+
+
+def test_check_ids_duplicate_across_leaf_and_record(tmp_path, capsys):
+    root = tmp_path / "product-breakdown"
+    (root / "02-architecture").mkdir(parents=True)
+    (root / "decisions").mkdir(parents=True)
+    (root / "pb.toml").write_text("", encoding="utf-8")
+    make_leaf(root / "02-architecture" / "leaf.md", "Leaf", "Sum", ident="AD-001")
+    (root / "decisions" / "AD-001-example-choice.md").write_text(RECORD, encoding="utf-8")
+    cfg = load_config(root)
+    assert check_ids(cfg, strict=True) == 1
+    assert "duplicate id 'AD-001'" in capsys.readouterr().out
+
+
+def test_check_ids_requires_leaf_identity_keys(tmp_path, capsys):
+    root = make_layer(tmp_path)
+    (root / "02-architecture" / "old.md").write_text(
+        "---\ntitle: Old\nsummary: Pre-id leaf\n---\n\n# Old\n\nBody.\n", encoding="utf-8"
+    )
+    assert check_ids(load_config(root), strict=True) == 1
+    out = capsys.readouterr().out
+    assert "missing front-matter key 'id'" in out and "missing front-matter key 'status'" in out
+
+
+def test_check_ids_type_prefix_mismatch(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "02-architecture" / "analysis.md",
+        "Analysis",
+        "An evaluation",
+        ident="INFO-042",
+        type_="eval",
+    )
+    assert check_ids(load_config(root), strict=True) == 1
+
+
+def test_check_ids_resolves_valid_citation(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "a.md", "A", "A", ident="INFO-020")
+    make_leaf(
+        root / "02-architecture" / "b.md",
+        "B",
+        "B",
+        ident="INFO-021",
+        body="Governing analysis: `INFO-020`.",
+    )
+    assert check_ids(load_config(root), strict=True) == 0
+
+
+def test_check_ids_ignores_non_registered_tokens(tmp_path):
+    root = make_layer(tmp_path)
+    for path in root.rglob("delegation-model.md"):
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "Current state.", "Standard HTTP-2, ISO-9001 not ids."
+            ),
+            encoding="utf-8",
+        )
+    assert check_ids(load_config(root), strict=True) == 0
+
+
+def test_check_ids_flags_unresolved_citation(tmp_path):
+    root = make_layer(tmp_path)
+    for path in root.rglob("delegation-model.md"):
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("Current state.", "See `INFO-999`."),
+            encoding="utf-8",
+        )
+    assert check_ids(load_config(root), strict=True) == 1
+
+
+def test_backfill_leaves_adds_identity(tmp_path, capsys):
+    root = make_layer(tmp_path)
+    (root / "02-architecture" / "old.md").write_text(
+        "---\ntitle: Old\nsummary: Pre-id leaf\n---\n\n# Old\n\nBody.\n", encoding="utf-8"
+    )
+    cfg = load_config(root)
+    changed = backfill_leaves(cfg)
+    assert changed and "backfilled 02-architecture/old.md" in changed[0]
+    text = (root / "02-architecture" / "old.md").read_text(encoding="utf-8")
+    assert "id: INFO-" in text and "type: info" in text and "status: current" in text
+    assert "date: 2026-" in text
+    assert check_ids(cfg, strict=True) == 0
+    # idempotent: a second pass changes nothing
+    assert backfill_leaves(cfg) == []
+
+
+def _min_root(tmp_path: Path) -> Path:
+    """A bare root with one layer folder; no leaves, fully deterministic ids."""
+    root = tmp_path / "product-breakdown"
+    (root / "02-architecture").mkdir(parents=True)
+    (root / "pb.toml").write_text("", encoding="utf-8")
+    return root
+
+
+def test_scaffold_new_leaf(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "first.md", "First", "One", ident="INFO-001")
+    cfg = load_config(root)
+    rel, ident, text = scaffold_leaf(cfg, "02-architecture", "Delegation model", summary="How")
+    assert ident == "INFO-002"
+    assert rel == Path("02-architecture/delegation-model.md")
+    assert "id: INFO-002" in text and "status: current" in text and "date: 2026-" in text
+    assert "summary: How" in text and "## Owns" in text
+
+
+def test_scaffold_refuses_existing_file(tmp_path):
+    root = _min_root(tmp_path)
+    cfg = load_config(root)
+    rel, _ident, text = scaffold_leaf(cfg, "02-architecture", "Delegation model", summary="How")
+    (root / rel).write_text(text, encoding="utf-8")
+    try:
+        scaffold_leaf(cfg, "02-architecture", "Delegation model", summary="How again")
+        raise AssertionError("expected FileExistsError")
+    except FileExistsError:
+        pass
+
+
+def test_next_id_pads_and_continues(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "a.md", "A", "A", ident="INFO-007")
+    make_leaf(root / "02-architecture" / "b.md", "B", "B", ident="INFO-009")
+    assert next_id(load_config(root), "info") == "INFO-010"
+    assert next_id(load_config(root), "eval") == "EVAL-001"

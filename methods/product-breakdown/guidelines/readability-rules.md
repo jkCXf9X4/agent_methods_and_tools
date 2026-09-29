@@ -39,8 +39,9 @@ alone.
 - **Do not store an idea across a row.** If a reader must scan left-to-right and
   stitch cells into one thought, that thought is prose; write it as a labeled
   bullet.
-- The index link table and the generated registers are deliberate exceptions:
-  they are lookups, and registers are never hand-edited.
+- The generated index `## Contents` lists and the generated registers are
+  deliberate exceptions: navigation and registers are generated, never
+  hand-edited. Hand-written content cites by ID and never carries a path link.
 
 ## Plain Language
 
@@ -54,5 +55,5 @@ alone.
 - Add structure, not claims: never invent facts, examples, or rationale.
 - Reformatting must preserve every fact, ID, link, number, and table row.
 - If it does not fit, use the node-budget remedy in
-  [storage-rules.md](storage-rules.md) (trim → link → split). Do not re-compact,
+  [storage-rules.md](storage-rules.md) (trim → cite → split). Do not re-compact,
   overflow, or duplicate to make room.

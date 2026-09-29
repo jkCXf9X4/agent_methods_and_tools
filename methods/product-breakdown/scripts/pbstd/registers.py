@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 from .config import Config
-from .records import as_list, parse_front_matter
+from .records import as_list, is_generated, parse_front_matter
 
 FOOTER_RE = re.compile(r"^## Decisions\s*$.*?(?=^## |\Z)", re.M | re.S)
 
@@ -160,27 +160,32 @@ def _in_deprecated(rel: Path) -> bool:
     return "deprecated" in rel.parts
 
 
-def _leaf_meta(path: Path, title_key: str, summary_key: str, fallback: str) -> tuple[str, str]:
-    """Return ``(label, summary)`` for a node from its front-matter."""
+def _leaf_meta(
+    path: Path, title_key: str, summary_key: str, id_key: str, fallback: str
+) -> tuple[str, str, str]:
+    """Return ``(label, summary, id)`` for a node from its front-matter."""
     data, _body = parse_front_matter(path.read_text(encoding="utf-8"))
     if not data:
-        return fallback, ""
+        return fallback, "", ""
     label = str(data.get(title_key, "")).strip() or fallback
     summary = str(data.get(summary_key, "")).strip()
-    return label, summary
+    ident = str(data.get(id_key, "")).strip()
+    return label, summary, ident
 
 
 def index_rows(folder: Path, cfg: Config) -> list[str]:
     """One generated Contents row per direct child of *folder*.
 
     Directories point at their ``README.md``; leaf files are listed directly.
-    Deprecated entries and index files themselves are skipped — deprecated
-    tombstones are dropped by regeneration, not re-wired.
+    A leaf's stable id (``INFO-007``) is shown in bold so a reader can cite it
+    straight from the index. Deprecated entries and index files themselves are
+    skipped — deprecated tombstones are dropped by regeneration, not re-wired.
     """
     title_key = cfg.get("indexes", "title_key", default="title")
     summary_key = cfg.get("indexes", "summary_key", default="summary")
+    id_key = cfg.get("ids", "key", default="id")
     index_names = set(cfg.get("layout", "index_names"))
-    rows: list[tuple[str, str, str]] = []
+    rows: list[tuple[str, str, str, str, str]] = []  # (sort_key, target, label, summary, id)
     for child in sorted(folder.iterdir()):
         rel = child.relative_to(cfg.root)
         if _in_deprecated(rel):
@@ -189,14 +194,17 @@ def index_rows(folder: Path, cfg: Config) -> list[str]:
             readme = child / "README.md"
             if not readme.is_file():
                 continue
-            label, summary = _leaf_meta(readme, title_key, summary_key, fallback=child.name)
-            rows.append((label, f"{child.name}/README.md", summary))
+            label, summary, ident = _leaf_meta(readme, title_key, summary_key, id_key, fallback=child.name)
+            rows.append(((ident or label), f"{child.name}/README.md", label, summary, ident))
         elif child.suffix == ".md" and child.name not in index_names:
-            label, summary = _leaf_meta(child, title_key, summary_key, fallback=child.stem)
-            rows.append((label, child.name, summary))
+            label, summary, ident = _leaf_meta(child, title_key, summary_key, id_key, fallback=child.stem)
+            rows.append(((ident or label), child.name, label, summary, ident))
     out: list[str] = []
-    for label, target, summary in sorted(rows):
-        out.append(f"- [{label}]({target})" + (f" — {summary}" if summary else ""))
+    for sort_key, target, label, summary, ident in sorted(rows):
+        core = f"[{label}]({target})"
+        if ident:
+            core = f"**{ident}** {core}"
+        out.append(f"- {core}" + (f" — {summary}" if summary else ""))
     return out
 
 
@@ -232,44 +240,53 @@ def sync_indexes(cfg: Config) -> list[str]:
             continue
         rows = index_rows(path.parent, cfg)
         block = f"{start}\n" + "\n".join(rows) + f"\n{end}"
-        new = _replace_section(text, match, block, start, end)
+        new = _replace_section(text, match, block)
         if new != text:
             path.write_text(new, encoding="utf-8")
             changed.append(rel.as_posix())
     return changed
 
 
-def _replace_section(text: str, match: re.Match, block: str, start: str, end: str) -> str:
+def _replace_section(text: str, match: re.Match, block: str) -> str:
     """Replace a ``## <section>`` (from *match*) with a generated *block*.
 
-    If the markers already exist inside the section, only the list between them
-    is replaced; otherwise the old list is replaced and the markers inserted.
+    The whole section body (including any old markers or hand-written list) is
+    replaced on every sync; the block carries its own markers. The heading line
+    is canonicalized, a blank line separates it from the list, and the next
+    heading (if any) is re-separated with a blank line — so repeated syncs are
+    stable.
     """
-    body = match.group(1)
-    si, ei = body.find(start), body.find(end)
-    if si != -1 and ei != -1 and ei > si:
-        new_body = body[:si] + block + body[ei + len(end):]
-    else:
-        new_body = block + "\n" + body.lstrip("\n").rstrip()
-        # keep any trailing prose after the old list? no: the list is the section
-    return text[: match.start()] + match.group(0)[: match.group(0).index("\n") + 1] + new_body + text[match.end():]
+    heading = match.group(0)[: match.group(0).index("\n")] if "\n" in match.group(0) else match.group(0)
+    tail = text[match.end():].lstrip("\n")
+    return (
+        text[: match.start()]
+        + heading
+        + "\n\n"
+        + block
+        + ("\n\n" + tail if tail else "\n")
+    )
+
+
+def generate(cfg: Config, out_dir=None, sync_footers_flag: bool = False) -> int:
     out_dir = Path(out_dir).resolve() if out_dir else cfg.root
     records = load_records(cfg)
-    if not records:
+    if records:
+        outputs = {
+            out_dir / cfg.get("registers", "index"): render_index(cfg, records),
+            out_dir / cfg.get("registers", "log"): render_log(cfg, records),
+            out_dir / cfg.get("registers", "traceability"): render_traceability(cfg, records),
+        }
+        for path, text in outputs.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+            print(f"wrote {path}")
+        if sync_footers_flag:
+            changed = sync_footers(cfg, records)
+            print(f"synced footers in {len(changed)} leaves")
+    else:
         print("No decision records found.")
-        return 0
-
-    outputs = {
-        out_dir / cfg.get("registers", "index"): render_index(cfg, records),
-        out_dir / cfg.get("registers", "log"): render_log(cfg, records),
-        out_dir / cfg.get("registers", "traceability"): render_traceability(cfg, records),
-    }
-    for path, text in outputs.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-        print(f"wrote {path}")
     if sync_footers_flag:
-        changed = sync_footers(cfg, records)
-        print(f"synced footers in {len(changed)} leaves")
+        for index in sync_indexes(cfg):
+            print(f"synced index {index}")
     print(f"{len(records)} decision records processed.")
     return 0

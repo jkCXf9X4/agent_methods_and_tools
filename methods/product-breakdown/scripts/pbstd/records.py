@@ -58,3 +58,32 @@ def headings(text: str) -> list[str]:
 def read_first_line(path: Path) -> str:
     with path.open(encoding="utf-8") as handle:
         return handle.readline()
+
+
+def is_generated(path: Path, marker: str) -> bool:
+    """True when the file's first line carries the generated-file marker."""
+    return bool(marker) and marker in read_first_line(path)
+
+
+def is_exempt(rel: Path, exempt: set[str]) -> bool:
+    """Node-budget exemption test against the relative path from the root.
+
+    An ``exempt`` entry matches when it is:
+
+    * a bare filename — ``rel.name`` (previous behaviour); or
+    * a bare folder name — any path component of *rel*, exempting that folder
+      and its whole subtree wherever it appears under the root; or
+    * a forward-slash relative path — a leading directory prefix of *rel*,
+      pinning one specific nested folder.
+    """
+    posix = rel.parent.as_posix()
+    for entry in exempt:
+        entry = entry.rstrip("/")
+        if not entry:
+            continue
+        if "/" in entry:
+            if posix == entry or posix.startswith(entry + "/"):
+                return True
+        elif entry in rel.parts:
+            return True
+    return False

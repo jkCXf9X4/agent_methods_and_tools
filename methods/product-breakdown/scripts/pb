@@ -3,9 +3,11 @@
 
 Self-contained in this skill bundle; run from the bundle's base directory:
 
-    python3 scripts/pb check --strict
+    python3 scripts/pb check --strict          # records, leaves, and stable-id checks
+    python3 scripts/pb check --fix             # backfill missing leaf id/type/date/status, then re-check
     python3 scripts/pb node-size --strict
     python3 scripts/pb registers --sync-footers
+    python3 scripts/pb new 02-architecture "Delegation model" --summary "How parents decompose work"
     python3 scripts/pb doctor
 
 The breakdown root is discovered from the working directory: nearest ``pb.toml``,
@@ -19,12 +21,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from pbstd.cli import decisions_main, doctor_main, node_size_main, registers_main  # noqa: E402
+from pbstd.cli import decisions_main, doctor_main, new_main, node_size_main, registers_main  # noqa: E402
 
 COMMANDS = {
     "check": decisions_main,
     "node-size": node_size_main,
     "registers": registers_main,
+    "new": new_main,
     "doctor": doctor_main,
 }
 

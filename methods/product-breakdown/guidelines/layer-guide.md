@@ -109,7 +109,7 @@ verify → IMP removed.
 
 - The concrete config knob is a file/config fact → **Implementation** owns it.
 - If it changes the interface contract between components → **Architecture**
-  owns that contract; Implementation defers to it by reference.
+  owns that contract; Implementation defers to it by ID.
 - If it changes a promised capability → **Product** owns the promise; defer by
   reference.
 - Baseline change → a decision record with `layers: [implementation,
@@ -134,9 +134,10 @@ verify → IMP removed.
 ## Cross-layer deferral pattern
 
 - Keep the canonical statement at the layer owning the primary concern.
-- Secondary layers get a link plus an explicit carve-out; never copy the fact.
-- One fact has exactly one home; the registers fail fast if a link points
-  nowhere.
+- Secondary layers cite the owning leaf **by ID** plus an explicit carve-out;
+  never copy the fact and never path-link it.
+- One fact has exactly one home; the registers fail fast if a `state:` or
+  `artifacts:` path points nowhere.
 
 ## Common mistakes
 
@@ -144,4 +145,5 @@ verify → IMP removed.
 - Duplicating the same fact across two layers.
 - Pushing design detail up (for example, config internals in Architecture).
 - Writing rationale into an index instead of a decision record.
-- Hand-editing a generated register.
+- Path-linking another node instead of citing its ID (or its record ID).
+- Hand-editing a generated register or an index `## Contents` list.

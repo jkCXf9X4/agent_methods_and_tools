@@ -17,6 +17,11 @@ never re-wired outgoing links.
 - File links and other status information that point from the deprecated file are
   **left stale, not fixed**: links in other files, `state:` fields, status rows,
   "superseded by" notes, decision-log rows, and generated-register footers.
+- **Generated surfaces are the exception that costs nothing:** a deprecated
+  entry simply stops appearing in the next `pb registers --sync-footers` run
+  (index `## Contents` lists drop it; registers never list it once `state:` no
+  longer points at it). That is regeneration, not churn — no hand edit, no
+  decision about whether to chase the pointer.
 
 ## Why
 

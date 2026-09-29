@@ -82,6 +82,29 @@ DEFAULTS: dict = {
         "log_title": "Decision Log",
         "banner": "<!-- GENERATED FILE — do not edit. Regenerate with pb-registers. -->",
     },
+    # Stable node IDs: every live node carries `<PREFIX>-<NNN>` in front-matter
+    # where the prefix encodes the CONTENT TYPE (info/decision/eval), never the
+    # location — so moving or renaming a file never changes its identity.
+    # Decision records keep their per-layer citation prefixes (ID-/PD-/AD-/...),
+    # which are grandfathered into the uniqueness and citation checks.
+    "ids": {
+        # Front-matter keys of the node identity.
+        "key": "id",
+        "type_key": "type",
+        "date_key": "date",
+        "status_key": "status",
+        # Zero-padded width of the sequence number (INFO-001).
+        "width": 3,
+        # Content type -> ID prefix. The type is what survives a move.
+        "prefixes": {"info": "INFO", "decision": "DEC", "eval": "EVAL"},
+        # Leaf `status:` values; decision records use [records].statuses.
+        "leaf_statuses": ["current", "draft", "superseded"],
+        "default_status": "current",
+        # Require id/type/date/status on live leaves (check_ids).
+        "require": True,
+        # Resolve every registered-prefix ID token in body text (check_ids).
+        "enforce_citations": True,
+    },
     # Generated index navigation: each index's Contents list is rebuilt from
     # direct-child front-matter so moves never require editing links by hand.
     "indexes": {

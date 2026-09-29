@@ -5,11 +5,13 @@ import re
 from pathlib import Path
 
 from .config import Config
+from .ids import ID_RE, prefix_for, registered_prefixes
 from .records import (
     as_list,
     headings,
+    is_exempt,
+    is_generated,
     parse_front_matter,
-    read_first_line,
     section_body,
 )
 
@@ -117,37 +119,9 @@ def check_decisions(cfg: Config, strict: bool, glob: str = "*.md") -> int:
     return 1 if strict and violations else 0
 
 
-def is_generated(path: Path, marker: str) -> bool:
-    return bool(marker) and marker in read_first_line(path)
-
-
 # Front-matter key a node can use to exempt itself from the node budget.
 EXEMPT_KEY = "pb_exempt"
 _FALSY = {"false", "no", "off", "0", "none", "null", "[]"}
-
-
-def is_exempt(rel: Path, exempt: set[str]) -> bool:
-    """Node-budget exemption test against the relative path from the root.
-
-    An ``exempt`` entry matches when it is:
-
-    * a bare filename — ``rel.name`` (previous behaviour); or
-    * a bare folder name — any path component of *rel*, exempting that folder
-      and its whole subtree wherever it appears under the root; or
-    * a forward-slash relative path — a leading directory prefix of *rel*,
-      pinning one specific nested folder.
-    """
-    posix = rel.parent.as_posix()
-    for entry in exempt:
-        entry = entry.rstrip("/")
-        if not entry:
-            continue
-        if "/" in entry:
-            if posix == entry or posix.startswith(entry + "/"):
-                return True
-        elif entry in rel.parts:
-            return True
-    return False
 
 
 def is_frontmatter_exempt(text: str) -> bool:
@@ -166,11 +140,25 @@ def is_frontmatter_exempt(text: str) -> bool:
     return str(value).strip().lower() not in _FALSY
 
 
+def effective_lines(text: str, start: str, end: str) -> int:
+    """Line count excluding the generated region between *start* and *end*.
+
+    Used for indexes whose Contents list is generated: the hand-written part is
+    what the budget governs; the generated table floats freely above it.
+    """
+    si, ei = text.find(start), text.find(end)
+    if si == -1 or ei == -1 or ei < si:
+        return len(text.splitlines())
+    return len(text[:si].splitlines()) + len(text[ei + len(end):].splitlines())
+
+
 def check_node_size(cfg: Config, strict: bool) -> int:
     index_names = set(cfg.get("layout", "index_names"))
     exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
     marker = cfg.get("layout", "generated_marker")
     exempt = set(cfg.get("nodes", "exempt"))
+    idx_start = cfg.get("indexes", "start_marker", default="<!-- pb:index:start -->")
+    idx_end = cfg.get("indexes", "end_marker", default="<!-- pb:index:end -->")
     index_goal = cfg.get("nodes", "index_goal")
     index_warning = cfg.get("nodes", "index_warning")
     index_strict = cfg.get("nodes", "index_strict")
@@ -193,7 +181,13 @@ def check_node_size(cfg: Config, strict: bool) -> int:
         text = path.read_text(encoding="utf-8")
         if is_frontmatter_exempt(text):
             continue
-        lines = len(text.splitlines())
+        if rel.name in index_names:
+            # Generated Contents lists are navigation output, not authorial
+            # content: count only the lines outside the marker region so a
+            # growing table cannot push a hand-written index over its budget.
+            lines = effective_lines(text, idx_start, idx_end)
+        else:
+            lines = len(text.splitlines())
         if rel.name in index_names:
             if lines > index_strict:
                 violations.append((rel, lines, f"exceeds index strict {index_strict}"))
@@ -230,4 +224,163 @@ def check_node_size(cfg: Config, strict: bool) -> int:
 
     if not violations and not warnings and not notices and not shorts:
         print("All nodes within budget.")
+    return 1 if strict and violations else 0
+
+
+def _in_deprecated(rel: Path) -> bool:
+    return "deprecated" in rel.parts
+
+
+def check_leaves(cfg: Config, strict: bool) -> int:
+    """Enforce the ID-citation rule on live leaves.
+
+    Live leaves (non-index, non-generated, non-exempt, outside ``decisions/``
+    and ``deprecated/``) must carry ``title`` + ``summary`` front-matter (the
+    generated indexes read it) and must not link to other nodes by path —
+    nodes are cited by ID, and the registers resolve IDs to locations. Indexes
+    are exempt: their Contents lists are generated, and their hand-written
+    sections keep the level of linking they already have.
+    """
+    index_names = set(cfg.get("layout", "index_names"))
+    exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
+    marker = cfg.get("layout", "generated_marker")
+    exempt = set(cfg.get("nodes", "exempt"))
+    require_fm = cfg.get("indexes", "require_leaf_frontmatter", default=True)
+    enforce_links = cfg.get("indexes", "enforce_id_citations", default=True)
+    title_key = cfg.get("indexes", "title_key", default="title")
+    summary_key = cfg.get("indexes", "summary_key", default="summary")
+
+    violations: list[str] = []
+    for path in sorted(cfg.root.rglob("*.md")):
+        rel = path.relative_to(cfg.root)
+        if rel.parts[0] in exclude_dirs or _in_deprecated(rel):
+            continue
+        if rel.name in index_names or rel.name.startswith("."):
+            continue
+        if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
+            continue
+        if is_exempt(rel, exempt) or is_generated(path, marker):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if is_frontmatter_exempt(text):
+            continue
+        data, body = parse_front_matter(text)
+        if require_fm:
+            if data is None:
+                violations.append(
+                    f"{rel}: missing front-matter ('{title_key}' + '{summary_key}' "
+                    "required for the generated index)"
+                )
+            else:
+                for key in (title_key, summary_key):
+                    if not str(data.get(key, "")).strip():
+                        violations.append(f"{rel}: missing front-matter key '{key}'")
+        if enforce_links:
+            for link in re.finditer(r"\]\(([^)]+)\)", body):
+                target = link.group(1).strip()
+                if target.startswith(("http://", "https://", "mailto:", "#")):
+                    continue
+                if target.endswith(".md"):
+                    violations.append(
+                        f"{rel}: path link to '{target}' — cite by ID instead"
+                    )
+
+    for line in violations:
+        print(f"HARD  {line}")
+    if not violations:
+        print("All leaves valid: front-matter present, no path links.")
+    return 1 if strict and violations else 0
+
+
+def check_ids(cfg: Config, strict: bool) -> int:
+    """Enforce the stable-ID scheme on every node.
+
+    * Every ``id`` across leaves AND records must be globally unique.
+    * A leaf id is ``<PREFIX>-<NNN>``; when the leaf declares ``type:`` the
+      prefix must be the one configured for that type.
+    * Live leaves must carry the identity keys ``id``/``type``/``date``/
+      ``status`` (config ``[ids].require``) and a valid leaf ``status``.
+    * Every registered-prefix ID token in body text (``INFO-007``, ``AD-012``,
+      ...) must resolve to an existing node id, so a citation survives a move
+      or flags the moment a node it points at disappears.
+    """
+    id_key = cfg.get("ids", "key", default="id")
+    type_key = cfg.get("ids", "type_key", default="type")
+    date_key = cfg.get("ids", "date_key", default="date")
+    status_key = cfg.get("ids", "status_key", default="status")
+    require = cfg.get("ids", "require", default=True)
+    enforce_citations = cfg.get("ids", "enforce_citations", default=True)
+    leaf_statuses = set(cfg.get("ids", "leaf_statuses", default=["current", "draft", "superseded"]))
+    type_prefixes = set(cfg.get("ids", "prefixes", default={}))
+    # Longest-first so `ID` never shadows `IMD`/`INFO`-style prefixes. Tokens
+    # need a zero-padded number (`\d{2,}`), so generic prose like "ID-1" or
+    # "HTTP-2" is never mistaken for a citation.
+    cite_re = re.compile(
+        r"(?<![A-Z0-9])(%s)-\d{2,}(?!\w)"
+        % "|".join(sorted(registered_prefixes(cfg), key=len, reverse=True))
+    )
+    index_names = set(cfg.get("layout", "index_names"))
+    exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
+    marker = cfg.get("layout", "generated_marker")
+    exempt = set(cfg.get("nodes", "exempt"))
+    record_skip = set(cfg.get("layout", "record_skip"))
+
+    violations: list[str] = []
+    known: dict[str, Path] = {}
+    candidates: list[tuple[Path, str]] = []  # (rel, body) for citation resolution
+    for path in sorted(cfg.root.rglob("*.md")):
+        rel = path.relative_to(cfg.root)
+        if rel.parts[0] in exclude_dirs or _in_deprecated(rel):
+            continue
+        if cfg.decisions.exists() and path.is_relative_to(cfg.decisions) and rel.name in record_skip:
+            continue  # templates/README inside decisions/ carry no real id
+        if rel.name.startswith(".") or is_generated(path, marker) or is_exempt(rel, exempt):
+            continue
+        data, body = parse_front_matter(path.read_text(encoding="utf-8"))
+        if data is None:
+            continue
+        ident = str(data.get(id_key, "")).strip()
+        if ident:
+            if ident in known:
+                violations.append(f"duplicate id '{ident}': {known[ident]} and {rel}")
+            else:
+                known[ident] = rel
+            if not ID_RE.match(ident):
+                violations.append(f"{rel}: id '{ident}' is not <PREFIX>-<NNN>")
+        if rel.name in index_names:
+            continue
+        if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
+            candidates.append((rel, body))
+            continue
+        type_ = str(data.get(type_key, "")).strip()
+        if ident and type_:
+            want = prefix_for(cfg, type_)
+            if want and not ident.startswith(want + "-"):
+                violations.append(
+                    f"{rel}: id '{ident}' does not match type '{type_}' prefix '{want}-'"
+                )
+        if require:
+            for k in (id_key, type_key, date_key, status_key):
+                if not str(data.get(k, "")).strip():
+                    violations.append(f"{rel}: missing front-matter key '{k}' (leaf identity)")
+            if type_ and type_ not in type_prefixes:
+                violations.append(
+                    f"{rel}: unknown leaf type '{type_}' (expected one of {', '.join(sorted(type_prefixes))})"
+                )
+            status_val = str(data.get(status_key, "")).strip()
+            if status_val and status_val not in leaf_statuses:
+                violations.append(f"{rel}: invalid leaf status '{status_val}'")
+        candidates.append((rel, body))
+
+    if enforce_citations:
+        for rel, body in candidates:
+            for match in cite_re.finditer(body):
+                token = match.group(0)
+                if token not in known:
+                    violations.append(f"{rel}: citation '{token}' does not resolve to a known id")
+
+    for line in violations:
+        print(f"HARD  {line}")
+    if not violations:
+        print("All ids unique and every citation resolves.")
     return 1 if strict and violations else 0

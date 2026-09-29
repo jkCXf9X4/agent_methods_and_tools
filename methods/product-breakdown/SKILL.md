@@ -37,6 +37,8 @@ All paths are relative to this skill's base directory.
 | Deprecated files: move to `deprecated/`, leave links stale | `guidelines/deprecated-files.md` |
 | Before/after edit steps | `guidelines/edit-checklist.md` |
 | Record shape | `templates/TEMPLATE.md` |
+| **Leaf shape** (full front-matter block; cite-by-ID rule) | `templates/LEAF.md` |
+| **Front-matter structure** (id/type/date/status; how IDs are displayed and used) | `guidelines/frontmatter.md` |
 | Config schema (only if overriding defaults) | `templates/pb.toml` |
 
 ## Route an edit
@@ -54,9 +56,9 @@ Route by concern; the boundary rule is the table in **The seven layers** below.
 ## The seven layers
 
 The current state is a seven-layer hierarchy, `00-intent/` … `06-evolution/`.
-Each layer has one index (`README.md`: purpose, owns/excludes, a link table) and
-small leaves, each holding one present-tense fact. Read top-down; write by
-routing each fact to exactly one home.
+Each layer has one index (`README.md`: purpose, owns/excludes, a **generated**
+`## Contents` list) and small leaves, each holding one present-tense fact. Read
+top-down; write by routing each fact to exactly one home.
 
 | Layer | Directory (record prefix) | Holds | Routing concern | Example fact |
 |---|---|---|---|---|
@@ -68,17 +70,29 @@ routing each fact to exactly one home.
 | Operation | `05-operation/` (OD-) | routine build, release, and run concerns | routine build/release | the release steps and on-call runbook |
 | Evolution | `06-evolution/` (IMP-) | future work and risk: IMP candidates, never current state | future work/risk | an IMP proposing an alternative storage format |
 
+Leaf IDs do not follow the layer prefixes. Every live leaf carries its own
+stable `id: <PREFIX>-<NNN>` in front-matter where the prefix encodes the
+**content type** (`info` → `INFO-`, `eval` → `EVAL-`), never the location — so a
+leaf can move freely between folders without its identity (or any citation of
+it) changing. Record prefixes in the table are the grandfathered citation
+labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
+
 ### How agents should work with them
 
 - **Read top-down, then into leaves.** Start at the breakdown's top-level
   `README.md`, open the layer index, then the leaf that owns the concern. Indexes
   are navigation, not content; leaves are the current-state facts.
+- **Cite by ID, never by path.** In leaf and index content, other nodes are
+  referenced by their stable ID — ``INFO-007`` for a leaf, ``AD-012`` for a
+  record — never by a markdown link to a file. The ID is the handle a reader
+  cites and the checker resolves; moving or renaming a file never breaks a
+  reference anywhere else.
 - **Route each fact to one home.** Use the routing concern in the table; where
   the top-level `README.md` states the boundary rule, the `README.md` wins.
 - **Information flows downward only** (Intent → Product → Architecture →
   Implementation → Verification → Operation). Never push design detail up a layer.
 - **Cross-layer material** keeps its canonical statement at the layer owning the
-  primary concern and defers the rest by reference; say the carve-out explicitly.
+  primary concern and defers the rest by ID; say the carve-out explicitly.
 - **Evolution holds candidates, not current state.** IMPs live there until their
   resulting state is written into an owning layer; do not restate current state in
   Evolution, and do not store rationale in an index.
@@ -89,8 +103,10 @@ routing each fact to exactly one home.
 ## Decision records
 
 One committed choice = one file at `decisions/<PREFIX>-<NNN>-<slug>.md`, following
-`templates/TEMPLATE.md` exactly. The prefix is a stable citation label; a
-cross-layer choice is one record with several `layers:` values.
+`templates/TEMPLATE.md` exactly. The prefix is a stable citation label correlated
+with the layer; a cross-layer choice is one record with several `layers:` values.
+Record ids are immune to renumbering (they are history) and are globally
+unique-checked against every leaf id.
 
 - Front-matter: `id, title, date, status, layers, state, artifacts, supersedes, superseded_by, related`.
 - `Decision` is past tense and dated; `state:` names the leaf that holds current state.
@@ -99,8 +115,11 @@ cross-layer choice is one record with several `layers:` values.
 
 ## Registers are generated
 
-`registers --sync-footers` writes the index, changelog, traceability map, and each
-`state:` leaf's `## Decisions` footer. Never hand-edit the output.
+`registers --sync-footers` writes the index, changelog, traceability map, each
+`state:` leaf's `## Decisions` footer, and each index's `## Contents` list
+(built from leaf front-matter `title` + `summary`, marker-guarded, each row
+showing the node's stable id: `- **INFO-001** [Title](leaf.md) — summary`).
+Never hand-edit the output.
 
 ## Node size budget
 
@@ -109,7 +128,7 @@ warning 75 / strict 100 lines (index: 40/50/75). At or under goal is silent;
 over goal → `info`; over warning → `warn`; over strict → `HARD` (fails
 `--strict`). A node can exempt itself with `pb_exempt: true` in its front
 matter — reserve for genuinely long reference material; the default remedy is
-trim → link → split.
+trim → cite → split.
 
 ## Commands
 
@@ -118,10 +137,13 @@ directory. No config is required — the standard's defaults apply, and the root
 discovered from `pb.toml` or `decisions/`.
 
 ```bash
+python3 scripts/pb new 02-architecture "Delegation model" --summary "How parents decompose work"  # scaffold a leaf; assigns the next id
 python3 scripts/pb registers --sync-footers   # after record/leaf edits
 python3 scripts/pb node-size --strict         # node budget (AD-009)
-python3 scripts/pb check --strict             # front-matter, sections, budgets, supersession
+python3 scripts/pb check --strict             # records, leaves, leaf identity, id uniqueness + citations
+python3 scripts/pb check --fix                # backfill missing leaf id/type/date/status, then re-check
 python3 scripts/pb doctor                     # show the resolved configuration
 ```
 
-Treat failures as blockers.
+Treat failures as blockers. The stable-ID scheme and the full front-matter
+structure are documented in `guidelines/frontmatter.md`.

@@ -21,10 +21,15 @@ those rules serve.
 
 ## The registers are generated
 
-- `decisions/README.md`, `design-choice-log.md`, `traceability-map.md`, and leaf
-  `## Decisions` footers are all generated from record front-matter.
+- `decisions/README.md`, `design-choice-log.md`, `traceability-map.md`, leaf
+  `## Decisions` footers, and each index's `## Contents` list are all generated
+  from record and leaf front-matter.
 - Hand-maintained indexes drift (rows without files, mirrored rationales); a
   generated register fails fast instead.
+- Generated navigation is what makes link minimization safe: hand-written
+  content cites by ID, and the generated indexes/registers are the only place
+  a location is written — so a move re-resolves on the next run instead of
+  requiring a link sweep.
 
 ## Enforcement is automated
 

@@ -22,8 +22,31 @@ exclude_dirs = ["tools"]
 [layers]
 # Reading order; also the allowed `layers:` values.
 order = ["intent", "product", "architecture", "implementation", "verification", "operation"]
-# ID prefix per layer (stable citation labels).
+# ID prefix per layer (stable citation labels for the decision stream).
 prefixes = { intent = "ID", product = "PD", architecture = "AD", implementation = "IMD", verification = "VD", operation = "OD" }
+
+[ids]
+# Stable node identity. Every live leaf carries `id: <PREFIX>-<NNN>` where the
+# prefix encodes the CONTENT TYPE, never the location — so a file can move or
+# be renamed without its identity (or any citation of it) changing. The
+# checker guarantees ids are globally unique and that every registered-prefix
+# citation in body text resolves. See guidelines/frontmatter.md.
+# Key names of the identity block.
+# key = "id"
+# type_key = "type"
+# date_key = "date"
+# status_key = "status"
+# Zero-padded width of the sequence number (INFO-001).
+# width = 3
+# Content type -> ID prefix. The type is what survives a move. `decision` maps
+# to records, which keep their grandfathered per-layer prefixes anyway.
+# prefixes = { info = "INFO", decision = "DEC", eval = "EVAL" }
+# Leaf `status:` values; decision records use [records].statuses.
+# leaf_statuses = ["current", "draft", "superseded"]
+# default_status = "current"
+# Require id/type/date/status on live leaves, and resolve citations.
+# require = true
+# enforce_citations = true
 
 [records]
 # Required body sections, in order.

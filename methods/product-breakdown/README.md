@@ -6,8 +6,9 @@ A systems-engineering record that separates **current state** from **history**:
   small leaves, present tense.
 - **History** — one flat, dated, immutable decision record per committed choice
   at `decisions/<ID>-<slug>.md`, naming its `state:` leaf.
-- **Generated** — the index, changelog, traceability map, and leaf footers are
-  produced from record front-matter, never hand-edited.
+- **Generated** — the index, changelog, traceability map, leaf footers, and
+  each index's `## Contents` list are produced from record/leaf front-matter,
+  never hand-edited.
 
 Why: a reader or agent can act on the design without reconstructing a decision
 thread, there is exactly one current truth, and hand-maintained registers cannot
@@ -21,7 +22,9 @@ drift. Full reasoning: [`guidelines/workflow-rationale.md`](guidelines/workflow-
 | [`guidelines/`](guidelines/) | Canonical rules: storage, readability, pipeline, traceability, checklist, deprecation, rationale |
 | [`templates/pb.toml`](templates/pb.toml) | Config schema; only needed to override defaults |
 | [`templates/TEMPLATE.md`](templates/TEMPLATE.md) | Decision-record template |
-| [`scripts/pb`](scripts/pb) | The tool: `check`, `node-size`, `registers`, `doctor` |
+| [`templates/LEAF.md`](templates/LEAF.md) | Leaf template: full front-matter block (`id`/`type`/`title`/`summary`/`date`/`status`) + the cite-by-ID rule |
+| [`guidelines/frontmatter.md`](guidelines/frontmatter.md) | Front-matter structure: how IDs are displayed and used |
+| [`scripts/pb`](scripts/pb) | The tool: `check`, `node-size`, `registers`, `new`, `doctor` |
 | [`tests/`](tests/) | Tests for the tool |
 
 ## Adopt it
@@ -51,5 +54,14 @@ The older model used per-layer `decisions/` folders and hand-maintained
    filename and adding front-matter (`state:`, `layers:`, `date:`).
 2. Point each record's `state:` at the leaf holding its current state, and delete
    the record's `Current Choice` / `Status` / `Layer` sections.
-3. Delete the hand-maintained registers; regenerate them.
-4. Run `check --strict` and `node-size --strict` until clean.
+3. Give every leaf the full front-matter block — `id`/`type`/`title`/`summary`/
+   `date`/`status`
+   ([`templates/LEAF.md`](templates/LEAF.md)); the generated index `## Contents`
+   lists and the leaf checks depend on it. `pb check --fix` backfills the
+   identity keys (`id`, `type`, `date`, `status`) onto existing leaves; `pb new`
+   scaffolds new ones.
+4. Replace hand-written path links in leaf bodies with ID citations, and move
+   each index's old link table under a `## Contents` heading — the next
+   `registers --sync-footers` rebuilds it from front-matter.
+5. Delete the hand-maintained registers; regenerate them.
+6. Run `check --strict` and `node-size --strict` until clean.
