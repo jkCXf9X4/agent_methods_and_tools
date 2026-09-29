@@ -27,6 +27,7 @@ install.py               installs a method's bundle into a skills directory
 | [mission-command](methods/mission-command/README.md) | Why parent agents brief children with intent, end state, constraints, and freedom of action (uppdragstaktik / mission command) |
 | [tool-motivations](methods/tool-motivations/README.md) | What each tool category is for and why, and how to choose between them |
 | [caveman](methods/caveman/README.md) | Ultra-compressed communication mode (lite/full/ultra/wenyan) that cuts output tokens while keeping technical accuracy |
+| [deep-academic-research](methods/deep-academic-research/README.md) | Grounds research-paper claims in verified, citable primary literature: decompose → parallel-sweep → verify → synthesize, with per-claim grounded / partially-grounded / open verdicts |
 | [skill-authoring](methods/skill-authoring/README.md) | Creates well-scoped Agent Skills (SKILL.md bundles) per the agentskills.io spec, with a stdlib-only spec validator |
 
 ## Install

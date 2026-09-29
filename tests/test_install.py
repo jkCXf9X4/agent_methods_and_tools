@@ -143,3 +143,29 @@ def test_all_force_overwrites_local_modification(tmp_path, method):
         ["install.py", "--all", "--into", str(tmp_path / "skills"), "--force"]
     ) == 0
     assert (dest / "SKILL.md").read_text() != "locally edited"
+
+
+def test_unknown_method_fails_cleanly(tmp_path):
+    assert (
+        run_args(["install.py", "--method", "nope", "--into", str(tmp_path / "skills")])
+        == 2
+    )
+    assert not (tmp_path / "skills").exists()
+
+
+def test_unknown_method_dry_run_fails_cleanly(tmp_path):
+    """--dry-run must not claim it would install a method that does not exist."""
+    assert (
+        run_args(
+            [
+                "install.py",
+                "--method",
+                "nope",
+                "--into",
+                str(tmp_path / "skills"),
+                "--dry-run",
+            ]
+        )
+        == 2
+    )
+    assert not (tmp_path / "skills").exists()

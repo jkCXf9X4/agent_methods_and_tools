@@ -17,7 +17,7 @@ related: []
 <!-- A decision record is history: one dated event, immutable once written. It
      answers "what was decided, when, and why" — never "what is the design now".
      Current state lives in the owning layer's leaf named by `state:`.
-     Budgets (enforced by tools/check_decisions.py --strict):
+     Budgets (enforced by `scripts/pb check --strict`):
        - Decision: target ≤4 lines, hard cap 6.
        - Rationale: target ≤5 lines, hard cap 8.
        - Context: target ≤5 lines, hard cap 8.

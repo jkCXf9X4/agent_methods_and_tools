@@ -40,7 +40,8 @@ Distilled from the 14-task theoretical-grounding wave in
 Install the skill bundle:
 
 ```bash
-python3 install.py --method deep-academic-research # -> ./.agents/skills/
+python3 install.py --method deep-academic-research                                  # -> ./.agents/skills/
+python3 install.py --method deep-academic-research --into ~/.config/opencode/skills # global
 ```
 
 The skill is self-contained: no scripts, no config. The findings.md template

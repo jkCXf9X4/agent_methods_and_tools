@@ -83,7 +83,7 @@ DEFAULTS: dict = {
         "banner": "<!-- GENERATED FILE — do not edit. Regenerate with pb-registers. -->",
     },
     # Stable node IDs: every live node carries `<PREFIX>-<NNN>` in front-matter
-    # where the prefix encodes the CONTENT TYPE (info/decision/eval), never the
+    # where the prefix encodes the CONTENT TYPE, never the
     # location — so moving or renaming a file never changes its identity.
     # Decision records keep their per-layer citation prefixes (ID-/PD-/AD-/...),
     # which are grandfathered into the uniqueness and citation checks.
@@ -96,7 +96,17 @@ DEFAULTS: dict = {
         # Zero-padded width of the sequence number (INFO-001).
         "width": 3,
         # Content type -> ID prefix. The type is what survives a move.
-        "prefixes": {"info": "INFO", "decision": "DEC", "eval": "EVAL"},
+        "prefixes": {
+            "info": "INFO",
+            "decision": "DEC",
+            "eval": "EVAL",
+            "research-question": "RQ",
+            "constraint": "CON",
+            "trace": "TR",
+            "capability": "CP",
+            "requirement": "REQ",
+            "test": "TEST",
+        },
         # Leaf `status:` values; decision records use [records].statuses.
         "leaf_statuses": ["current", "draft", "superseded"],
         "default_status": "current",

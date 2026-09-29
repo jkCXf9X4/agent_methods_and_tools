@@ -2,10 +2,11 @@
 
 Every live node (leaf or record) carries a unique front-matter
 ``id: <PREFIX>-<NNN>`` where the prefix encodes the *content type* (INFO, DEC,
-EVAL), never the location — so moving or renaming a file does not change its
-identity. ``pb new`` scaffolds new leaves with the full front-matter block;
-``pb check --fix`` backfills ``id``/``type``/``date``/``status`` onto existing
-leaves that predate the ID scheme.
+EVAL, RQ, CON, TR, CP, REQ, TEST), never the location — so moving or renaming a
+file does not change its identity. ``pb new`` scaffolds new leaves with the
+full front-matter block; ``pb check --fix`` backfills
+``id``/``type``/``date``/``status`` onto existing leaves that predate the ID
+scheme.
 """
 from __future__ import annotations
 

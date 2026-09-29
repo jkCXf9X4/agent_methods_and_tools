@@ -1,6 +1,7 @@
 ---
 id: <PREFIX>-<NNN>   # stable, unique; assigned by `pb new` — never the filename
-type: <info|eval>    # content type; drives the ID prefix (info -> INFO-, eval -> EVAL-)
+type: <info|decision|eval|research-question|constraint|trace|capability|requirement|test>
+    # content type; drives the ID prefix (info -> INFO-, eval -> EVAL-, test -> TEST-, ...)
 title: <Leaf title — same as the H1; label in the generated index>
 summary: <One-line description; the "→ description" of the generated index row>
 date: <YYYY-MM-DD>   # created or last reviewed

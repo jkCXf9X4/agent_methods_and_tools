@@ -21,7 +21,7 @@ status: current
 | Key | Meaning | Notes |
 |---|---|---|
 | `id` | Stable, unique reference: `<PREFIX>-<NNN>` | The citation handle. Assigned by `pb new`, guaranteed globally unique by `pb check`. **Never** the filename or a path. |
-| `type` | Content type: `info` \| `eval` | Drives the ID prefix (`info` → `INFO-`, `eval` → `EVAL-`). The type is what survives a move. |
+| `type` | Content type: one of `info` \| `decision` \| `eval` \| `research-question` \| `constraint` \| `trace` \| `capability` \| `requirement` \| `test` | Drives the ID prefix (`info` → `INFO-`, `eval` → `EVAL-`, `test` → `TEST-`, …). The type is what survives a move. Add or rename types in `[ids].prefixes` of `pb.toml`. |
 | `title` | Same as the H1 | The generated index label. |
 | `summary` | One line | The generated index row description. |
 | `date` | `YYYY-MM-DD` | Created or last reviewed. |
@@ -49,7 +49,7 @@ status: current
 
 ## Creating and backfilling
 
-- `python3 scripts/pb new <directory> "<Title>" --summary "…" [--type info|eval]`
+- `python3 scripts/pb new <directory> "<Title>" --summary "…" [--type info|eval|research-question|...]`
   scaffolds a leaf with the full block: next free id for the type's prefix,
   today's date, `status: current`, and an Owns/Excludes skeleton. It refuses to
   overwrite an existing file.

@@ -112,6 +112,9 @@ def available_methods() -> list[str]:
 
 def install_one(method: str, into: Path, force: bool, dry_run: bool) -> int:
     source = ROOT / "methods" / method
+    if not (source / "SKILL.md").is_file():
+        print(f"error: unknown method '{method}' (no {source.relative_to(ROOT)}/SKILL.md)")
+        return 2
     dest = into.resolve() / method
 
     src_checksums = tree_checksums(source)
@@ -211,6 +214,13 @@ def main() -> int:
         if failures:
             print(f"{failures} of {len(methods)} methods not installed")
         return 1 if failures else 0
+
+    if not (ROOT / "methods" / args.method / "SKILL.md").is_file():
+        print(
+            f"error: unknown method '{args.method}' "
+            f"(available: {', '.join(available_methods())})"
+        )
+        return 2
 
     return install_one(args.method, into, args.force, args.dry_run)
 

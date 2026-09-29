@@ -40,7 +40,11 @@ prefixes = { intent = "ID", product = "PD", architecture = "AD", implementation 
 # width = 3
 # Content type -> ID prefix. The type is what survives a move. `decision` maps
 # to records, which keep their grandfathered per-layer prefixes anyway.
-# prefixes = { info = "INFO", decision = "DEC", eval = "EVAL" }
+# prefixes = {
+#   info = "INFO", decision = "DEC", eval = "EVAL",
+#   research-question = "RQ", constraint = "CON", trace = "TR",
+#   capability = "CP", requirement = "REQ", test = "TEST",
+# }
 # Leaf `status:` values; decision records use [records].statuses.
 # leaf_statuses = ["current", "draft", "superseded"]
 # default_status = "current"

@@ -72,7 +72,8 @@ top-down; write by routing each fact to exactly one home.
 
 Leaf IDs do not follow the layer prefixes. Every live leaf carries its own
 stable `id: <PREFIX>-<NNN>` in front-matter where the prefix encodes the
-**content type** (`info` → `INFO-`, `eval` → `EVAL-`), never the location — so a
+**content type** (`info` → `INFO-`, `eval` → `EVAL-`, `test` → `TEST-`, …; the
+full set is the `[ids].prefixes` map in `pb.toml`), never the location — so a
 leaf can move freely between folders without its identity (or any citation of
 it) changing. Record prefixes in the table are the grandfathered citation
 labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
@@ -132,17 +133,19 @@ trim → cite → split.
 
 ## Commands
 
-Run from the breakdown's repository root; paths are relative to this skill's base
-directory. No config is required — the standard's defaults apply, and the root is
-discovered from `pb.toml` or `decisions/`.
+Run from the breakdown's repository root. Substitute the installed bundle's path
+for `<skills-dir>` below (`python3 <skills-dir>/product-breakdown/scripts/pb …`);
+the README of this method shows the full form after install. No config is
+required — the standard's defaults apply, and the root is discovered from
+`pb.toml` or `decisions/`.
 
 ```bash
-python3 scripts/pb new 02-architecture "Delegation model" --summary "How parents decompose work"  # scaffold a leaf; assigns the next id
-python3 scripts/pb registers --sync-footers   # after record/leaf edits
-python3 scripts/pb node-size --strict         # node budget (AD-009)
-python3 scripts/pb check --strict             # records, leaves, leaf identity, id uniqueness + citations
-python3 scripts/pb check --fix                # backfill missing leaf id/type/date/status, then re-check
-python3 scripts/pb doctor                     # show the resolved configuration
+python3 <skills-dir>/product-breakdown/scripts/pb new 02-architecture "Delegation model" --summary "How parents decompose work"  # scaffold a leaf; assigns the next id
+python3 <skills-dir>/product-breakdown/scripts/pb registers --sync-footers   # after record/leaf edits
+python3 <skills-dir>/product-breakdown/scripts/pb node-size --strict         # node budget (AD-009)
+python3 <skills-dir>/product-breakdown/scripts/pb check --strict             # records, leaves, leaf identity, id uniqueness + citations
+python3 <skills-dir>/product-breakdown/scripts/pb check --fix                # backfill missing leaf id/type/date/status, then re-check
+python3 <skills-dir>/product-breakdown/scripts/pb doctor                     # show the resolved configuration
 ```
 
 Treat failures as blockers. The stable-ID scheme and the full front-matter
