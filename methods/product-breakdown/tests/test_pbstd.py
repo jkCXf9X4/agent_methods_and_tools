@@ -97,6 +97,44 @@ def test_node_size_flags_oversize_leaf(tmp_path):
     assert check_node_size(load_config(root), strict=True) == 1
 
 
+def test_node_size_exempt_bare_folder(tmp_path):
+    root = make_breakdown(tmp_path)
+    folder = root / "analysis-algebraic-loop-constraint"
+    folder.mkdir()
+    (folder / "big.md").write_text("\n".join(f"line {i}" for i in range(80)), encoding="utf-8")
+    (root / "pb.toml").write_text(
+        '[nodes]\nexempt = ["analysis-algebraic-loop-constraint"]\n',
+        encoding="utf-8",
+    )
+    assert check_node_size(load_config(root), strict=True) == 0
+
+
+def test_node_size_exempt_nested_dir_path(tmp_path):
+    root = make_breakdown(tmp_path)
+    folder = root / "02-architecture" / "analysis-algebraic-loop-constraint"
+    folder.mkdir(parents=True)
+    (folder / "big.md").write_text("\n".join(f"line {i}" for i in range(80)), encoding="utf-8")
+    # Wholesale list replacement (merge semantics): only the pinned folder is exempt.
+    (root / "pb.toml").write_text(
+        '[nodes]\nexempt = ["02-architecture/analysis-algebraic-loop-constraint"]\n',
+        encoding="utf-8",
+    )
+    assert check_node_size(load_config(root), strict=True) == 0
+
+
+def test_node_size_folder_exempt_does_not_leak(tmp_path):
+    root = make_breakdown(tmp_path)
+    folder = root / "analysis-algebraic-loop-constraint"
+    folder.mkdir()
+    (folder / "small.md").write_text("fine", encoding="utf-8")
+    (root / "big.md").write_text("\n".join(f"line {i}" for i in range(80)), encoding="utf-8")
+    (root / "pb.toml").write_text(
+        '[nodes]\nexempt = ["analysis-algebraic-loop-constraint"]\n',
+        encoding="utf-8",
+    )
+    assert check_node_size(load_config(root), strict=True) == 1
+
+
 def test_parse_front_matter_lists():
     data, body = parse_front_matter(RECORD)
     assert data["id"] == "AD-001"

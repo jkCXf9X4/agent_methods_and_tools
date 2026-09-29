@@ -41,7 +41,10 @@ index_cap = 75
 leaf_target = 50
 leaf_cap = 75
 leaf_min = 10
-# Filenames always exempt from the node budget.
+# Filenames and folders always exempt from the node budget. A bare name (file
+# or folder) matches on any path component, so a folder entry exempts that
+# folder's whole subtree under the root; a "dir" or "dir/sub" entry with a
+# slash pins one exact nested folder.
 exempt = ["design-choice-log.md", "traceability-map.md"]
 
 [registers]

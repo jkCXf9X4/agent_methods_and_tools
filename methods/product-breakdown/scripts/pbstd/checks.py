@@ -121,6 +121,30 @@ def is_generated(path: Path, marker: str) -> bool:
     return bool(marker) and marker in read_first_line(path)
 
 
+def is_exempt(rel: Path, exempt: set[str]) -> bool:
+    """Node-budget exemption test against the relative path from the root.
+
+    An ``exempt`` entry matches when it is:
+
+    * a bare filename — ``rel.name`` (previous behaviour); or
+    * a bare folder name — any path component of *rel*, exempting that folder
+      and its whole subtree wherever it appears under the root; or
+    * a forward-slash relative path — a leading directory prefix of *rel*,
+      pinning one specific nested folder.
+    """
+    posix = rel.parent.as_posix()
+    for entry in exempt:
+        entry = entry.rstrip("/")
+        if not entry:
+            continue
+        if "/" in entry:
+            if posix == entry or posix.startswith(entry + "/"):
+                return True
+        elif entry in rel.parts:
+            return True
+    return False
+
+
 def check_node_size(cfg: Config, strict: bool) -> int:
     index_names = set(cfg.get("layout", "index_names"))
     exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
@@ -140,7 +164,7 @@ def check_node_size(cfg: Config, strict: bool) -> int:
         rel = path.relative_to(cfg.root)
         if rel.parts and rel.parts[0] in exclude_dirs:
             continue
-        if rel.name in exempt or is_generated(path, marker):
+        if is_exempt(rel, exempt) or is_generated(path, marker):
             continue
         lines = sum(1 for _ in path.open(encoding="utf-8"))
         if rel.name in index_names:
