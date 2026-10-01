@@ -16,6 +16,44 @@ How information is stored in `product-breakdown/`.
 - Information flows downward only (Intent → Product → Architecture →
   Implementation → Verification → Operation). Do not push design detail up.
 
+## Three surfaces: state, history, tracking
+
+Every fact lands on exactly one of three surfaces. Before writing, name the
+category:
+
+| Category | The fact says | Home |
+|---|---|---|
+| **Current state** | "X is …" — timeless, present tense | owning layer leaf |
+| **History** | "On 2026-09-29, X changed …" — dated, immutable | `decisions/` record |
+| **Tracking** | "X is open / in progress / done", "N of M remain" | tracker pointer, or the IMP's `status:` |
+
+- A **dated event inside a leaf** is history in the wrong place: a leaf records
+  what is, not what happened. "On 2026-09-29 we chose A" belongs in a record;
+  the leaf states the outcome — "A is …".
+- A **progress marker inside a leaf** is tracking in the wrong place: a leaf
+  records the fact, not how far along it is. "3 of 5 done" belongs in the
+  tracker; the leaf states the design fact unchanged.
+- A leaf's own `status:` (`current` / `draft` / `superseded`) is the leaf's
+  lifecycle, never the progress of the work it describes.
+- Route by the category, not by where the fact currently sits.
+
+## Trackers are pointers, not hosts
+
+Open items and progress live in a **tracker**: either the IMP's own `status:`
+and lifecycle, or a separate tracker file placed beside the leaves (the
+`99_open-items.md` pattern — one file at a folder's tail listing open work).
+Either way the tracker is a **pointer**:
+
+- A tracker row names the item, its canonical home **by ID**, and its
+  open/closed status — nothing else.
+- The tracker never **absorbs** the content it points at: no restated facts, no
+  dated event log, no progress narrative. If a row is carrying prose, that
+  prose has a canonical home; the row points at it instead.
+- Watch for the failure mode: a tracker collecting "on 2026-09-29, X happened"
+  notes has become a second history; one that restates facts has become a
+  second leaf. Both are duplication — cut the absorbed content back to a
+  pointer row.
+
 ## Ownership and the Boundary Rule
 
 - Route every addition through the boundary rule in the breakdown's top-level
@@ -91,6 +129,8 @@ Three size tiers per node, enforced by `scripts/pb node-size --strict`:
 |---|---|
 | Current scope / state / requirements / interfaces | owning layer index + leaves |
 | One committed choice, as dated history | `decisions/<PREFIX>-NNN-<slug>.md` |
+| Dated event / "on 2026-09-29, we did X" — history | `decisions/` record, never a leaf |
+| Open item / progress status ("N of M done") | a tracker pointer, or the IMP's `status:` — never a leaf |
 | Candidate / future change (not yet decided) | `06-evolution/selected/` as an IMP |
 | Implemented IMP (historical) | `06-evolution/implemented/` — no longer tracked |
 | Registry / changelog of decisions (generated) | `decisions/README.md`, `design-choice-log.md` |

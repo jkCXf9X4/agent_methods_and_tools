@@ -13,6 +13,19 @@ those rules serve.
 - Decision records are dated, immutable events: what was chosen, when, and why.
   They never restate current state, so there is exactly one current truth.
 
+## Status and events are not current state
+
+- A leaf states what **is**, not what happened and not how far along the work
+  is. A dated event ("on 2026-09-29, X changed") is history and belongs in a
+  record; a progress marker ("3 of 5 done") is tracking and belongs in a
+  tracker or the IMP's `status:`. Both smuggled into a leaf turn the leaf into
+  a journal, and a journal cannot be acted on as current truth.
+- A separated tracker (for example a `99_open-items.md` beside the leaves) is a
+  pointer, not a content home: it enumerates open work and points at the
+  canonical leaf or record by ID. When it starts absorbing dated events or
+  progress narrative, it becomes a second leaf or a second history — the same
+  drift the generated registers exist to prevent.
+
 ## Records are history, not a palimpsest
 
 - A record is written once; when the design changes, a new record supersedes the

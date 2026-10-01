@@ -6,8 +6,10 @@ For humans and agents editing `product-breakdown/`.
 
 1. Locate the canonical home (see the routing table in
    [`storage-rules.md`](storage-rules.md)).
-2. Decide whether the change is **state** (edit a layer leaf) or **history** (add
-   a dated decision record); a change to an accepted baseline needs a record.
+2. Decide whether the change is **state** (edit a layer leaf), **history** (add
+   a dated decision record), or **status/tracking** (update an open-item tracker
+   or the IMP's `status:` — never a leaf); a change to an accepted baseline
+   needs a record.
 3. Check for an existing representation; decide create / update / merge /
    supersede / remove.
 4. Respect the node budget (AD-009): index goal ≤40 / warning 50 / strict 75,

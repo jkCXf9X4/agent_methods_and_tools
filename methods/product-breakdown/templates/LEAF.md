@@ -10,8 +10,10 @@ status: <current|draft|superseded>
 
 # <Leaf Title>
 
-<One current-state fact per line, present tense. This is the leaf the generated
-`## Contents` list of its folder index points at.
+<One current-state fact per line, present tense. State what is, never what
+happened (a dated event belongs in a decision record) and never how far along the
+work is (progress belongs in a tracker or the IMP's `status:`). This is the leaf
+the generated `## Contents` list of its folder index points at.
 
 **Cite by ID, never by path.** Other nodes are referenced by their stable ID
 (``INFO-007`` for a leaf, ``AD-012`` for a decision record), not by a markdown

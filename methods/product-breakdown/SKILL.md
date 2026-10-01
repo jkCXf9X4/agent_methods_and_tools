@@ -51,6 +51,10 @@ remove):
 - **Not-yet-decided candidate** → file an IMP under `06-evolution/selected/`.
 - **Implemented candidate** → move the IMP to `06-evolution/implemented/`; it is no longer tracked.
 - **Already decided, only doing left** → a task, not a new record.
+- **Dated event or progress status** → neither: a dated event is history (a
+  record); progress belongs in a tracker pointer or the IMP's `status:` — never
+  in a leaf. See `guidelines/storage-rules.md` (three surfaces / trackers are
+  pointers).
 
 Route by concern; the boundary rule is the table in **The seven layers** below.
 
@@ -103,6 +107,10 @@ labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
 - **History points at state.** A record's `layers:` names the layers it touches
   and `state:` names the canonical leaf; a cross-layer choice is one record with
   several `layers:` values.
+- **Trackers point, they do not host.** Open items live in a tracker (an
+  open-item file or the IMP's `status:`), never in a leaf — and the tracker
+  stays a pointer to the owning leaf/record by ID; it does not absorb dated
+  events or progress narrative itself.
 
 ## Decision records
 

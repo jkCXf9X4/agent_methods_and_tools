@@ -151,3 +151,9 @@ verify → IMP moved to `06-evolution/implemented/`.
 - Writing rationale into an index instead of a decision record.
 - Path-linking another node instead of citing its ID (or its record ID).
 - Hand-editing a generated register or an index `## Contents` list.
+- Storing a dated event ("on 2026-09-29, X changed") in a current-state leaf —
+  that is history; it belongs in a record, and the leaf states the outcome.
+- Storing tracked progress ("3 of 5 done") in a leaf — status belongs in a
+  tracker or the IMP's `status:`, never in a leaf.
+- Letting an open-item tracker (for example `99_open-items.md`) absorb the
+  content it points at instead of staying a pointer to the owning leaves.
