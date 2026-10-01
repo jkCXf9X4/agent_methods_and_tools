@@ -7,7 +7,7 @@ How future changes are worked before they are implemented.
 ```
 Idea → IMP (Proposed) → IMP (Selected, scoped) → decision record in the flat
        stream (if baseline-changing or cross-layer) → owning layer adopts →
-       task contract → implement → verify → IMP removed
+       task contract → implement → verify → IMP moved to 06-evolution/implemented/
 ```
 
 - **Scoped candidate:** an IMP is a scoped candidate, not implementation
@@ -42,11 +42,18 @@ Idea → IMP (Proposed) → IMP (Selected, scoped) → decision record in the fl
 
 ## IMP Lifecycle
 
-- **Lifecycle:** `Proposed → Selected`, then the candidate is **removed** once
-  its resulting state is written into the owning layer.
+- **Lifecycle:** `Proposed → Selected → Implemented`. A live IMP file lives in
+  `06-evolution/selected/`; once implemented, it is **moved** to
+  `06-evolution/implemented/` (`./implemented/` relative to the layer).
+- **Not tracked after the move:** an implemented IMP is no longer tracked. Drop
+  it from the `06-evolution/README.md` cross-listing and from the roadmap
+  register; its status is no longer maintained, and it must not be re-added to
+  any open-work tracker. The file survives under `implemented/` only as a
+  historical record of what was done.
 - **Status source:** status is read **only** from the IMP file header; never
   maintain a second status copy.
-- **Cross-listing:** every IMP is cross-listed in `06-evolution/README.md`.
+- **Cross-listing:** every open IMP (Proposed/Selected) is cross-listed in
+  `06-evolution/README.md`; implemented IMPs are not.
   - A listed IMP must have a real file.
   - Do not list phantom IDs.
 - Update an IMP's status in place; do not create competing records for the same

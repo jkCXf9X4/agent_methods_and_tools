@@ -92,5 +92,6 @@ Three size tiers per node, enforced by `scripts/pb node-size --strict`:
 | Current scope / state / requirements / interfaces | owning layer index + leaves |
 | One committed choice, as dated history | `decisions/<PREFIX>-NNN-<slug>.md` |
 | Candidate / future change (not yet decided) | `06-evolution/selected/` as an IMP |
+| Implemented IMP (historical) | `06-evolution/implemented/` — no longer tracked |
 | Registry / changelog of decisions (generated) | `decisions/README.md`, `design-choice-log.md` |
 | Leaf → decision → artifact links (generated) | `traceability-map.md` |

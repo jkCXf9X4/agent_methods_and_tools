@@ -93,6 +93,9 @@ Candidates for change.
 
 - **Holds:** not-yet-decided IMPs (evidence-backed pain or risk) and
   selected-but-not-implemented work.
+- **Retires:** an implemented IMP is **moved** to `06-evolution/implemented/`
+  (`./implemented/` relative to the layer) and is **no longer tracked** — dropped
+  from the cross-listing and the roadmap register, never re-added to open work.
 - **Example facts:** an IMP proposing an alternative storage format, with the
   evidence behind it.
 - **Does not hold:** current state (never restate it here), or accepted
@@ -103,7 +106,7 @@ Candidates for change.
 
 Each change walks the same pipeline: idea → IMP → decision record (if
 baseline-changing or cross-layer) → owning layer adopts → task → implement →
-verify → IMP removed.
+verify → IMP moved to `06-evolution/implemented/`.
 
 ### Example 1: a new CLI flag that changes the config schema
 
@@ -123,8 +126,9 @@ verify → IMP removed.
 - Cross-layer (format = Architecture, migration scripts = Implementation,
   rollout = Operation) → an accepted decision record is required before
   implementation.
-- Owning layers adopt their slice of state; the IMP is removed once its
-  resulting state is written; registers are regenerated.
+- Owning layers adopt their slice of state; once implemented, the IMP is moved
+  to `06-evolution/implemented/` and is no longer tracked; registers are
+  regenerated.
 
 ### Example 3: clarifying who the product serves
 

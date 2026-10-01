@@ -49,6 +49,7 @@ remove):
 - **State changed** → edit the owning layer leaf, present tense; a baseline change also needs a record.
 - **New committed choice** → add a dated record to `decisions/`.
 - **Not-yet-decided candidate** → file an IMP under `06-evolution/selected/`.
+- **Implemented candidate** → move the IMP to `06-evolution/implemented/`; it is no longer tracked.
 - **Already decided, only doing left** → a task, not a new record.
 
 Route by concern; the boundary rule is the table in **The seven layers** below.
@@ -94,9 +95,11 @@ labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
   Implementation → Verification → Operation). Never push design detail up a layer.
 - **Cross-layer material** keeps its canonical statement at the layer owning the
   primary concern and defers the rest by ID; say the carve-out explicitly.
-- **Evolution holds candidates, not current state.** IMPs live there until their
-  resulting state is written into an owning layer; do not restate current state in
-  Evolution, and do not store rationale in an index.
+- **Evolution holds candidates, not current state.** IMPs live in
+  `06-evolution/selected/` until their resulting state is written into an owning
+  layer; an implemented IMP is moved to `06-evolution/implemented/` and is no
+  longer tracked. Do not restate current state in Evolution, and do not store
+  rationale in an index.
 - **History points at state.** A record's `layers:` names the layers it touches
   and `state:` names the canonical leaf; a cross-layer choice is one record with
   several `layers:` values.
