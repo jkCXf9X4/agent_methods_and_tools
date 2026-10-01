@@ -1,0 +1,14 @@
+
+\newcommand{\nohyphens}{%
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+}
+
+\newcolumntype{N}[1]{>{\RaggedRight\hyphenpenalty=10000\exhyphenpenalty=10000}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\newlength\tindent
+\setlength{\tindent}{\parindent}
+\setlength{\parindent}{0pt}
+\renewcommand{\indent}{\hspace*{\tindent}}

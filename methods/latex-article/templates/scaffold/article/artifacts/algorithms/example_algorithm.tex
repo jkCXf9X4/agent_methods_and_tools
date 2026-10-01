@@ -1,0 +1,16 @@
+\begin{algorithm}[tb]
+\caption{Example orchestration algorithm}
+\label{algo:example}
+\SetAlgoNoLine
+\DontPrintSemicolon
+
+\KwSeq{
+    \ForEach{macro step $H$}{
+        \KwPar{
+            \ForEach{group $G_k$}{
+                Execute the group schedule\;
+            }
+        }
+    }
+}
+\end{algorithm}

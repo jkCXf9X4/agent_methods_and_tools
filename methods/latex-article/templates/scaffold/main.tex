@@ -1,0 +1,27 @@
+\documentclass[12pt]{article}
+
+\input{article/shared/preamble}
+\input{article/shared/commands}
+\input{article/shared/algorithm_setup}
+\input{article/shared/acronyms}
+
+\addbibresource{article/bibliography.bib}
+
+\title{Paper Title}
+
+\author[1, *]{First AUTHOR}
+\author[1]{Second AUTHOR}
+\affil[1]{Affiliation, City, Country}
+\affil[ ]{Corresponding author: author@example.com}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{article/structure}
+
+\section*{References}
+\printbibliography[heading=none]
+
+\end{document}
