@@ -27,6 +27,13 @@ status: current
 | `date` | `YYYY-MM-DD` | Created or last reviewed. |
 | `status` | `current` \| `draft` \| `superseded` | Leaf lifecycle. Decision records use the record statuses instead. |
 
+- A leaf kept in place as `superseded` must name its replacement by a
+  resolvable ID citation in its body or summary (the checker enforces it) — a
+  tombstone without a forward pointer reads as live to a browsing agent. The
+  cleaner long-term disposition is to quarantine the file under a `deprecated/`
+  subfolder instead (see [deprecated-files.md](deprecated-files.md)); the
+  quarantine is what removes it from generated indexes.
+
 - Decision records use their own block ([`templates/TEMPLATE.md`](../templates/TEMPLATE.md)):
   the per-layer citation prefixes (`ID-`, `PD-`, `AD-`, …) are grandfathered,
   and their ids are uniqueness-checked against every other node.

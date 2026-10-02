@@ -83,6 +83,32 @@ def test_check_decisions_catches_bad_status(tmp_path):
     assert check_decisions(load_config(root), strict=True) == 1
 
 
+def test_check_decisions_superseded_requires_forward_pointer(tmp_path, capsys):
+    root = make_breakdown(tmp_path)
+    path = root / "decisions" / "AD-001-example-choice.md"
+    path.write_text(RECORD.replace("status: accepted", "status: superseded"), encoding="utf-8")
+    assert check_decisions(load_config(root), strict=True) == 1
+    assert "requires a forward pointer" in capsys.readouterr().out
+
+
+def test_check_decisions_superseded_with_forward_pointer(tmp_path):
+    """A superseded record that names its successor (bidirectionally) passes."""
+    root = make_breakdown(tmp_path)
+    (root / "decisions" / "AD-002-successor.md").write_text(
+        RECORD.replace("id: AD-001", "id: AD-002")
+        .replace("AD-001: Example choice", "AD-002: Successor")
+        .replace("supersedes: []", "supersedes: [AD-001]"),
+        encoding="utf-8",
+    )
+    path = root / "decisions" / "AD-001-example-choice.md"
+    path.write_text(
+        RECORD.replace("status: accepted", "status: superseded")
+        .replace("superseded_by: []", "superseded_by: [AD-002]"),
+        encoding="utf-8",
+    )
+    assert check_decisions(load_config(root), strict=True) == 0
+
+
 def test_generate_writes_registers(tmp_path):
     cfg = load_config(make_breakdown(tmp_path))
     assert generate(cfg, sync_footers_flag=True) == 0
@@ -123,6 +149,45 @@ def test_node_size_skips_records(tmp_path):
         encoding="utf-8",
     )
     assert check_node_size(load_config(root), strict=True) == 0
+
+
+def test_node_size_skips_deprecated_tombstones(tmp_path):
+    """A quarantined file under deprecated/ is a tombstone, not a live node:
+    its size is irrelevant (and it is hidden from browsing by the path)."""
+    root = make_breakdown(tmp_path)
+    tomb = root / "deprecated"
+    tomb.mkdir()
+    (tomb / "old-notes.md").write_text("\n".join(f"line {i}" for i in range(120)), encoding="utf-8")
+    assert check_node_size(load_config(root), strict=True) == 0
+
+
+def test_check_ids_superseded_leaf_requires_replacement(tmp_path, capsys):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "a.md", "A", "A", ident="INFO-020")
+    make_leaf(
+        root / "02-architecture" / "old.md",
+        "Old",
+        "Predecessor",
+        ident="INFO-021",
+        status="superseded",
+        body="Current state.",
+    )
+    assert check_ids(load_config(root), strict=True) == 1
+    assert "superseded leaf must name its replacement by ID" in capsys.readouterr().out
+
+
+def test_check_ids_superseded_leaf_with_replacement_passes(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "a.md", "A", "A", ident="INFO-020")
+    make_leaf(
+        root / "02-architecture" / "old.md",
+        "Old",
+        "Predecessor",
+        ident="INFO-021",
+        status="superseded",
+        body="Superseded by `INFO-020`.",
+    )
+    assert check_ids(load_config(root), strict=True) == 0
 
 
 def test_node_size_three_tiers(tmp_path, capsys):

@@ -29,6 +29,7 @@ All paths are relative to this skill's base directory.
 | Task | Read |
 |---|---|
 | Layer ownership / boundary rule | the breakdown's top-level `README.md` |
+| **Reading order, stop conditions, stale triage** | `guidelines/browsing-protocol.md` |
 | Per-layer detail and worked routing examples | `guidelines/layer-guide.md` |
 | Where a fact is stored; routing | `guidelines/storage-rules.md` |
 | Writing form | `guidelines/readability-rules.md` |
@@ -85,9 +86,20 @@ labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
 
 ### How agents should work with them
 
-- **Read top-down, then into leaves.** Start at the breakdown's top-level
-  `README.md`, open the layer index, then the leaf that owns the concern. Indexes
-  are navigation, not content; leaves are the current-state facts.
+- **Read top-down, then into leaves; read state, not history.** Start at the
+  breakdown's top-level `README.md`, open the layer index, then the leaf that
+  owns the concern, and **stop when the fact is found**. Indexes are
+  navigation, not content; leaves are the current-state facts. Enter
+  `decisions/` records, IMPs, or investigations only when the question is
+  *why/when/what's next* — never *what is*: history and candidates are not
+  current truth. See `guidelines/browsing-protocol.md`.
+- **Never whole-directory read.** Do not read/glob `decisions/`, `selected/`,
+  or `investigations/` as a browsing step; `grep` a term scoped to the owning
+  layer instead.
+- **Triage anything stale on encounter.** Front-matter `status`/`date` decide:
+  `superseded`/`deprecated` means follow the forward pointer or stop (the node
+  is a redirect, not evidence); a `deprecated/` path is a tombstone whose links
+  are left stale by design.
 - **Cite by ID, never by path.** In leaf and index content, other nodes are
   referenced by their stable ID — ``INFO-007`` for a leaf, ``AD-012`` for a
   record — never by a markdown link to a file. The ID is the handle a reader

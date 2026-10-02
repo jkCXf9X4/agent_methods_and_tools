@@ -114,7 +114,15 @@ def check_decisions(cfg: Config, strict: bool, glob: str = "*.md") -> int:
                 )
 
     for rid, data in records.items():
-        for other in as_list(data.get("superseded_by")):
+        successors = as_list(data.get("superseded_by"))
+        # Stale nodes must point forward: a superseded/deprecated record with
+        # no successor reads as live to a browsing agent (the exact failure
+        # mode info-hygiene exists to prevent).
+        if str(data.get("status", "")) in ("superseded", "deprecated") and not successors:
+            violations.append(
+                f"{rid}: status '{data.get('status')}' requires a forward pointer in superseded_by"
+            )
+        for other in successors:
             if other not in records:
                 warnings.append(f"{rid}: superseded_by references missing record '{other}'")
             elif rid not in as_list(records[other].get("supersedes")):
@@ -186,6 +194,8 @@ def check_node_size(cfg: Config, strict: bool) -> int:
         rel = path.relative_to(cfg.root)
         if rel.parts and rel.parts[0] in exclude_dirs:
             continue
+        if _in_deprecated(rel):
+            continue  # tombstones are quarantined, not live nodes
         if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
             continue  # records are governed by check_decisions' section budgets
         if is_exempt(rel, exempt) or is_generated(path, marker):
@@ -340,6 +350,7 @@ def check_ids(cfg: Config, strict: bool) -> int:
     violations: list[str] = []
     known: dict[str, Path] = {}
     candidates: list[tuple[Path, str]] = []  # (rel, body) for citation resolution
+    superseded_leaves: list[tuple[Path, str]] = []  # (rel, body+summary) needing a forward pointer
     for path in sorted(cfg.root.rglob("*.md")):
         rel = path.relative_to(cfg.root)
         if rel.parts[0] in exclude_dirs or _in_deprecated(rel):
@@ -388,6 +399,11 @@ def check_ids(cfg: Config, strict: bool) -> int:
             status_val = str(data.get(status_key, "")).strip()
             if status_val and status_val not in leaf_statuses:
                 violations.append(f"{rel}: invalid leaf status '{status_val}'")
+            if status_val == "superseded":
+                # A leaf kept in place as superseded must still point at its
+                # replacement, or a browsing agent reads the tombstone as live.
+                search_text = body + "\n" + str(data.get("summary", ""))
+                superseded_leaves.append((rel, search_text))
         candidates.append((rel, body))
 
     for reserved in cfg.get("ids", "reserved_ids", default=[]):
@@ -407,6 +423,13 @@ def check_ids(cfg: Config, strict: bool) -> int:
                 token = match.group(0)
                 if token not in known:
                     violations.append(f"{rel}: citation '{token}' does not resolve to a known id")
+        for rel, text in superseded_leaves:
+            tokens = {m.group(0) for m in cite_re.finditer(without_fences(text))}
+            if not any(t in known for t in tokens):
+                violations.append(
+                    f"{rel}: superseded leaf must name its replacement by ID "
+                    f"(a resolvable citation like `INFO-140`)"
+                )
 
     for line in violations:
         print(f"HARD  {line}")
