@@ -52,6 +52,11 @@ remove):
 - **Not-yet-decided candidate** → file an IMP under `06-evolution/selected/`.
 - **Implemented candidate** → move the IMP to `06-evolution/implemented/`; it is no longer tracked.
 - **Already decided, only doing left** → a task, not a new record.
+- **"Should-not-do" material → a decision, then archive.** A chosen *boundary*
+  is state ("X is out of scope"); a decided *rejection* is history — write the
+  `decisions/` record (a rejection is a normal record), then move the prose
+  under `deprecated/` or delete it. Undeveloped suggestions and authoring
+  guidance never belong in a live leaf. See `guidelines/storage-rules.md`.
 - **Dated event or progress status** → neither: a dated event is history (a
   record); progress belongs in a tracker pointer or the IMP's `status:` — never
   in a leaf. See `guidelines/storage-rules.md` (three surfaces / trackers are
@@ -100,6 +105,12 @@ labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
   `superseded`/`deprecated` means follow the forward pointer or stop (the node
   is a redirect, not evidence); a `deprecated/` path is a tombstone whose links
   are left stale by design.
+- **Treat a "not-to-be-done" node as a rejection, not a rule.** A leaf that
+  lists what should not be done, or an undeveloped-suggestion artifact, is not
+  current state: its choice belongs in `decisions/` and its prose in
+  `deprecated/`. Do not act on its directions — follow the decision record.
+  `pb check --strict` flags these artifacts for routing
+  (`guidelines/storage-rules.md`).
 - **Cite by ID, never by path.** In leaf and index content, other nodes are
   referenced by their stable ID — ``INFO-007`` for a leaf, ``AD-012`` for a
   record — never by a markdown link to a file. The ID is the handle a reader

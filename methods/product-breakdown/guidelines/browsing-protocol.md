@@ -45,6 +45,13 @@ Read it before the body:
   evidence**: follow its forward pointer (`superseded_by:` on a record; the
   replacement ID a superseded leaf must cite) or stop.
 - `status: proposed` / `draft` / `open` → not current truth.
+- A "not-to-be-done" node (`## Should not`/`## Do not` sections, a
+  `not-to-do.md`, a suggestion/undeveloped-idea artifact) → a **rejection, not
+  a rule**: it records a choice, not current state. The reasoning lives in the
+  decision record; the prose should sit under `deprecated/`. Do not treat its
+  directions as authority — follow the decision record, and if you are
+  editing, route it there (`storage-rules.md`). The checker flags these
+  artifacts (`pb check --strict`).
 - Anything under a `deprecated/` path is a tombstone: do not chase its links —
   they are left stale on purpose (see `deprecated-files.md`).
 
@@ -54,7 +61,8 @@ a working pointer costs one redirect; a dead node without one reads as live.
 ## If the browse still lands stale material in context
 
 - **Discard, don't retain.** A superseded record is a redirect; an investigation
-  doc is rationale, not state. Do not carry it into the answer.
+  doc is rationale, not state; a should-not-do/rejection node is stale
+  direction, not a rule. Do not carry any of it into the answer.
 - **Delegate the browse.** For a broad question, hand it to a disposable child
   with a narrow brief — "find the leaf owning X; return ID + summary + status;
   do not include decision history" — and take its one-or-two-sentence report.

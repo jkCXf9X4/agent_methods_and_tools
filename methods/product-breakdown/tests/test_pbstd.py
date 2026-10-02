@@ -3,7 +3,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pbstd.checks import check_decisions, check_ids, check_leaves, check_node_size
+from pbstd.checks import (
+    check_decisions,
+    check_ids,
+    check_leaves,
+    check_node_size,
+    check_rejections,
+)
 from pbstd.config import DEFAULTS, find_root, load_config
 from pbstd.records import parse_front_matter
 from pbstd.registers import generate, sync_indexes
@@ -671,3 +677,102 @@ def test_check_ids_rejects_unknown_leaf_type(tmp_path, capsys):
     make_leaf(root / "02-architecture" / "x.md", "X", "X", ident="INFO-001", type_="bogus")
     assert check_ids(load_config(root), strict=True) == 1
     assert "unknown leaf type 'bogus'" in capsys.readouterr().out
+
+
+# --- rejection routing: "should not do X" is a decision, not a leaf ---
+
+
+def test_check_rejections_flags_not_to_do_named_leaf(tmp_path, capsys):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "not-to-do.md", "Not to do", "Don'ts")
+    assert check_rejections(load_config(root), strict=True) == 1
+    out = capsys.readouterr().out
+    assert "rejection" in out and "decision record" in out and "deprecated/" in out
+
+
+def test_check_rejections_flags_undeveloped_suggestion_named_leaf(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "06-evolution" / "undeveloped-suggestions.md", "Suggestions", "Maybe"
+    )
+    assert check_rejections(load_config(root), strict=True) == 1
+
+
+def test_check_rejections_ignores_tracker_titled_suggestion_log(tmp_path):
+    """A live *tracker* of raw ideas (the 99_open-items.md pattern, e.g. a
+    backlog) is not a rejection artifact: it tracks dispositions and points at
+    canonical open work. Only the filename/headings signal the artifact."""
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "06-evolution" / "backlog.md",
+        "Backlog — raw suggestion log",
+        "Raw idea log",
+        body="Disposition: DONE / OPEN. Canonical open work: `INFO-196`.\n",
+        ident="INFO-140",
+    )
+    assert check_rejections(load_config(root), strict=True) == 0
+
+
+def test_check_rejections_flags_should_not_heading(tmp_path, capsys):
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "02-architecture" / "concepts.md",
+        "Concepts",
+        "Sum",
+        body="## Should not\n\nDo not do this thing.\n",
+    )
+    assert check_rejections(load_config(root), strict=True) == 1
+    out = capsys.readouterr().out
+    assert "not-to-be-done" in out and "decision record" in out
+
+
+def test_check_rejections_ignores_present_tense_boundary(tmp_path):
+    """A boundary IS state: 'X is out of scope' phrased present-tense passes,
+    even when it uses 'never'/'do not' prose — the scan is artifact-level."""
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "02-architecture" / "boundaries.md",
+        "Boundaries",
+        "Sum",
+        body="The runtime has no root shell; a root shell is out of scope. "
+        "Records are write-once, never modified.\n",
+    )
+    assert check_rejections(load_config(root), strict=True) == 0
+
+
+def test_check_rejections_ignores_headings_inside_fenced_code(tmp_path):
+    root = _min_root(tmp_path)
+    make_leaf(
+        root / "02-architecture" / "examples.md",
+        "Examples",
+        "Sum",
+        body="Sample input:\n\n```markdown\n## Should not\n```\n",
+    )
+    assert check_rejections(load_config(root), strict=True) == 0
+
+
+def test_check_rejections_skips_deprecated_tombstones(tmp_path):
+    root = _min_root(tmp_path)
+    tomb = root / "02-architecture" / "deprecated"
+    tomb.mkdir(parents=True)
+    (tomb / "undeveloped-suggestions.md").write_text("old\n", encoding="utf-8")
+    assert check_rejections(load_config(root), strict=True) == 0
+
+
+def test_check_rejections_skips_decision_records(tmp_path):
+    """A rejection is a decision record: the record itself must never be
+    flagged — decisions/ is the correct home for 'we chose not to do X'."""
+    root = make_breakdown(tmp_path)
+    (root / "decisions" / "AD-001-reject-the-thing.md").write_text(
+        RECORD.replace("AD-001: Example choice", "AD-001: Reject The Thing"),
+        encoding="utf-8",
+    )
+    assert check_rejections(load_config(root), strict=True) == 0
+
+
+def test_check_ids_rejection_status_routes_to_decision(tmp_path, capsys):
+    root = _min_root(tmp_path)
+    make_leaf(root / "02-architecture" / "x.md", "X", "X", status="rejected")
+    assert check_ids(load_config(root), strict=True) == 1
+    out = capsys.readouterr().out
+    assert "rejection is a decision record" in out and "deprecated/" in out

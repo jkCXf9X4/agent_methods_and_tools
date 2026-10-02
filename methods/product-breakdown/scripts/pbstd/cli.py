@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 
-from .checks import check_decisions, check_ids, check_leaves, check_node_size
+from .checks import check_decisions, check_ids, check_leaves, check_node_size, check_rejections
 from .config import load_config, resolve_root
 from .ids import backfill_leaves, scaffold_leaf
 from .registers import generate
@@ -40,6 +40,7 @@ def decisions_main(default_root=None, argv=None) -> int:
     def run() -> int:
         rc = check_decisions(cfg, args.strict, args.glob)
         rc |= check_leaves(cfg, args.strict)
+        rc |= check_rejections(cfg, args.strict)
         rc |= check_ids(cfg, args.strict)
         return rc
 

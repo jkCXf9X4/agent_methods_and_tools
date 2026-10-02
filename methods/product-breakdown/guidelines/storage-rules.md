@@ -37,6 +37,31 @@ category:
   lifecycle, never the progress of the work it describes.
 - Route by the category, not by where the fact currently sits.
 
+## Boundaries, rejections, and guidance
+
+A "should not do X" statement is state **only** when it is a **boundary** the
+design holds right now, phrased as a present-tense fact ("X is out of scope",
+"records are write-once, never modified") — that is exactly what a leaf is
+for. Everything else in that family is not state:
+
+- **Rejection** — "on <date> we considered X and chose NOT to do it because …"
+  is a committed choice. It belongs in a `decisions/` record (a rejection is
+  history; `[records].statuses` admits `rejected`), and the prose that
+  explained "why not" is archived under `deprecated/` — or deleted if fully
+  dead. Never leave it as a live leaf: a browsing agent reads "don't do X" as
+  current direction, not as a dated refusal.
+- **Undeveloped suggestion / not-yet-decided idea** — not state and not
+  history yet. File an IMP through the change pipeline
+  (`change-pipeline.md`) or archive it; never a live leaf.
+- **Authoring guidance** — "don't edit generated output", "never do X when
+  updating the tree" — belongs in this method's guidelines (or a decision),
+  never in the breakdown tree.
+
+`pb check --strict` enforces the boundary at the artifact level: a live leaf
+whose filename or section headings announce "don't do X" (should not / do
+not / what not to do / not to be done / rejected / …) is a HARD violation
+routed to `decisions/` + `deprecated/`.
+
 ## Trackers are pointers, not hosts
 
 Open items and progress live in a **tracker**: either the IMP's own `status:`
@@ -133,5 +158,8 @@ Three size tiers per node, enforced by `scripts/pb node-size --strict`:
 | Open item / progress status ("N of M done") | a tracker pointer, or the IMP's `status:` — never a leaf |
 | Candidate / future change (not yet decided) | `06-evolution/selected/` as an IMP |
 | Implemented IMP (historical) | `06-evolution/implemented/` — no longer tracked |
+| Rejected alternative / decided "should not do X" (dated choice) | `decisions/` record; the "why not" prose is archived under `deprecated/` or deleted |
+| Undeveloped suggestion / not-decided idea | an IMP candidate via the change pipeline, or archive — never a live leaf |
+| Authoring guidance ("don't edit generated output") | this method's guidelines, never the breakdown tree |
 | Registry / changelog of decisions (generated) | `decisions/README.md`, `design-choice-log.md` |
 | Leaf → decision → artifact links (generated) | `traceability-map.md` |

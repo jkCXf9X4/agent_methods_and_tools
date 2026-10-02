@@ -314,6 +314,105 @@ def check_leaves(cfg: Config, strict: bool) -> int:
     return 1 if strict and violations else 0
 
 
+# --- Rejection routing: "should not do X" is a decision, not state ---
+#
+# A live leaf holds current state. A list of what should not be done — a
+# decided rejection, an undeveloped suggestion, a "not-to-do" appendix — is
+# not state: the *choice* belongs in a decision record (a rejection is a
+# committed choice and `[records].statuses` admits `rejected`), and the prose
+# is archived under `deprecated/` or deleted. The signals below are the
+# unambiguous *artifact* markers — a filename that names the artifact class
+# (not-to-do.md, suggestions.md, ...), a whole-section denied heading, a
+# rejection-like leaf status — deliberately not prose tone and not title text,
+# so a boundary phrased as present-tense state ("X is out of scope", "records
+# are write-once, never modified") and a tracker holding raw ideas with
+# disposition markers (the `99_open-items.md` pattern) always pass.
+REJECTION_NAME_TOKENS = (
+    "suggestion",
+    "undeveloped",
+    "not-to-do",
+    "should-not",
+    "do-not",
+    "dont",  # also matches "don't" in filenames/slugs
+    "wontfix",
+    "forbidden",
+    "rejected",
+    "abandoned",
+)
+# Whole H2 sections that announce not-to-be-done direction. Heading text is
+# lowercased before matching.
+REJECTION_HEADINGS = (
+    "should not",
+    "don't",
+    "do not",
+    "what not to do",
+    "not to be done",
+    "forbidden",
+    "rejected",
+    "never",
+)
+# Leaf statuses that mean "this choice was rejected" — history, not a live
+# leaf lifecycle. They are already invalid leaf statuses; check_ids adds the
+# routing hint so the message says where the material goes.
+REJECTION_STATUSES = ("rejected", "abandoned", "withdrawn", "parked")
+_REJECTION_ROUTE = (
+    "this is not state: record the choice as a decision record, then move "
+    "this file under deprecated/ (or delete it if fully dead)"
+)
+
+
+def check_rejections(cfg: Config, strict: bool) -> int:
+    """A live leaf must be current state, never a "should not do X" artifact.
+
+    "Don't do X" sections, suggestion/not-to-do files, and undeveloped-idea
+    artifacts are the stale direction a browsing agent reads as current truth.
+    They are misclassified rejections: the choice belongs in ``decisions/`` and
+    the prose in ``deprecated/``. Scanned signals are structural only — the
+    filename (a leaf that names the artifact class), whole-section headings,
+    and rejection-like statuses — so present-tense boundaries ("X is out of
+    scope", "records are write-once, never modified") and trackers of raw
+    ideas (``99_open-items.md`` pattern) always pass. One finding per node; a
+    matching filename wins over a matching heading.
+    """
+    index_names = set(cfg.get("layout", "index_names"))
+    exclude_dirs = set(cfg.get("layout", "exclude_dirs"))
+    marker = cfg.get("layout", "generated_marker")
+    exempt = set(cfg.get("nodes", "exempt"))
+
+    violations: list[str] = []
+    for path in sorted(cfg.root.rglob("*.md")):
+        rel = path.relative_to(cfg.root)
+        if rel.parts[0] in exclude_dirs or _in_deprecated(rel):
+            continue
+        if rel.name in index_names or rel.name.startswith("."):
+            continue
+        if cfg.decisions.exists() and path.is_relative_to(cfg.decisions):
+            continue
+        if is_exempt(rel, exempt) or is_generated(path, marker):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if is_frontmatter_exempt(text):
+            continue
+        _data, body = parse_front_matter(text)
+
+        name = rel.name.lower()
+        headings_l = [h.lower() for h in headings(without_fences(body))]
+        if any(tok in name for tok in REJECTION_NAME_TOKENS):
+            violations.append(f"{rel}: name looks like a rejection/suggestion artifact — {_REJECTION_ROUTE}")
+        else:
+            denied = next((h for h in headings_l if h in REJECTION_HEADINGS), None)
+            if denied:
+                violations.append(
+                    f"{rel}: 'not-to-be-done' section '## {denied}' — {_REJECTION_ROUTE}"
+                )
+
+    for line in violations:
+        print(f"HARD  {line}")
+    if not violations:
+        print("All leaves valid: no rejection/not-to-be-done artifacts masquerading as state.")
+    return 1 if strict and violations else 0
+
+
 def check_ids(cfg: Config, strict: bool) -> int:
     """Enforce the stable-ID scheme on every node.
 
@@ -398,7 +497,14 @@ def check_ids(cfg: Config, strict: bool) -> int:
                 )
             status_val = str(data.get(status_key, "")).strip()
             if status_val and status_val not in leaf_statuses:
-                violations.append(f"{rel}: invalid leaf status '{status_val}'")
+                if status_val.lower() in REJECTION_STATUSES:
+                    violations.append(
+                        f"{rel}: invalid leaf status '{status_val}' — a rejection is a "
+                        f"decision record: record the choice in decisions/, then move "
+                        f"this file under deprecated/ (or delete it)"
+                    )
+                else:
+                    violations.append(f"{rel}: invalid leaf status '{status_val}'")
             if status_val == "superseded":
                 # A leaf kept in place as superseded must still point at its
                 # replacement, or a browsing agent reads the tombstone as live.
