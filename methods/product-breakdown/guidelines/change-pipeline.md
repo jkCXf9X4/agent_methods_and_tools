@@ -58,6 +58,15 @@ Idea → IMP (Proposed) → IMP (Selected, scoped) → decision record in the fl
   - Do not list phantom IDs.
 - Update an IMP's status in place; do not create competing records for the same
   candidate.
+- **Update status after every job.** Working an IMP — any job, partial or
+  complete — ends with a status update in the **same change**: partial work
+  records what is done and what remains; completed work sets the final status,
+  updates the header, and moves the file to `06-evolution/implemented/` (see
+  "Not tracked after the move" above). A `status:` left standing from before
+  the job is stale information; a status written anywhere else (a second file,
+  a hand-edited register row, a stale roadmap cell) is a duplicate that can
+  contradict the header. Both are conflicting information, not documentation —
+  the file header is the only status copy.
 
 ## Graduating to Implementation
 

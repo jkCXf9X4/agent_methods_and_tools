@@ -111,6 +111,13 @@ labels of the decision stream. Full structure: `guidelines/frontmatter.md`.
   open-item file or the IMP's `status:`), never in a leaf — and the tracker
   stays a pointer to the owning leaf/record by ID; it does not absorb dated
   events or progress narrative itself.
+- **Update an IMP's status with the work.** An IMP's `status:` is the single
+  tracking home for that candidate, and working one always ends with a status
+  update in the **same change**: partial work records what is done and what
+  remains, completed work sets the status and moves the file per the lifecycle.
+  Never leave the old status standing after a job, and never write the status
+  anywhere else — a stale or duplicated status is conflicting information, not
+  documentation. See `guidelines/change-pipeline.md` (IMP lifecycle).
 
 ## Decision records
 
